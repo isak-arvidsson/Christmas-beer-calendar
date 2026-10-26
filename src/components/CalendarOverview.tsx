@@ -1,14 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  CheckCircle2,
-  Clock,
-  Search,
-  Filter,
-  Flame,
-  Award,
-  Sparkles,
-  ExternalLink,
-} from 'lucide-react';
+import { CheckCircle2, Search } from 'lucide-react';
 import { BeerDay, CalendarRatings, TesterId } from '../types.ts';
 import { TESTERS } from '../data/initialBeers.ts';
 import { BeerBottleIllustration } from './BeerBottleIllustration.tsx';
@@ -17,166 +8,43 @@ import { computeDayRatingStats, getScoreStyle } from '../utils/colors.ts';
 interface CalendarOverviewProps {
   beers: BeerDay[];
   ratings: CalendarRatings;
-  activeTesterId: TesterId;
   onSelectDay: (day: number) => void;
-  onOpenSync: () => void;
 }
 
 export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
   beers,
   ratings,
-  activeTesterId,
   onSelectDay,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'pending-me' | 'complete' | 'top'>('all');
 
-  const activeTester = TESTERS.find((t) => t.id === activeTesterId) || TESTERS[0];
-
-  // Overall statistics
-  const overallStats = useMemo(() => {
-    let totalRatingsLogged = 0;
-    let completedDaysCount = 0;
-
-    beers.forEach((b) => {
-      const dayRating = ratings[b.day] || {};
-      const stats = computeDayRatingStats(dayRating);
-      totalRatingsLogged += stats.count;
-      if (stats.isComplete) completedDaysCount++;
-    });
-
-    return {
-      totalRatingsLogged,
-      completedDaysCount,
-      totalPossibleRatings: beers.length * 4,
-    };
-  }, [beers, ratings]);
-
-  // Filtered beers
+  // Filtered beers (search query only)
   const filteredBeers = useMemo(() => {
     return beers.filter((beer) => {
-      // Search matching
       const matchesSearch =
         beer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         beer.brewery.toLowerCase().includes(searchQuery.toLowerCase()) ||
         beer.style.toLowerCase().includes(searchQuery.toLowerCase()) ||
         `dag ${beer.day}`.includes(searchQuery.toLowerCase());
 
-      if (!matchesSearch) return false;
-
-      const dayRating = ratings[beer.day] || {};
-      const stats = computeDayRatingStats(dayRating);
-      const myRating = dayRating[activeTesterId];
-
-      if (filterMode === 'pending-me') {
-        return !myRating;
-      }
-      if (filterMode === 'complete') {
-        return stats.isComplete;
-      }
-      if (filterMode === 'top') {
-        return stats.average !== null && stats.average >= 7.0;
-      }
-
-      return true;
+      return matchesSearch;
     });
-  }, [beers, ratings, searchQuery, filterMode, activeTesterId]);
+  }, [beers, searchQuery]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      {/* Hero Banner Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#14201c] via-[#1b2b26] to-[#14201c] p-6 sm:p-8 border border-amber-950/40 shadow-2xl mb-8">
-        <div className="relative z-10 max-w-2xl">
-          <div className="text-xs font-semibold uppercase tracking-widest text-amber-400">
-            Julölskalendern 2026 · 24 Dagar av Hantverksöl
-          </div>
-          <h1 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white font-cinzel tracking-tight text-balance">
-            Välkommen till Julölsprovningen
+      {/* Welcome Header & Search Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-cinzel tracking-tight">
+            Julölskalendern 2026
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed">
-            Varje dag fram till julafton öppnar vi en ny svensk julöl och sätter betyg från 0.0 till 10.0.
-            Klicka på en dag för att registrera dagens betyg eller följa ställningen på topplistan.
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            24 dagars svensk hantverksjulöl · Betygsätt från 0.0 till 10.0
           </p>
-
-          {/* Quick Metrics Strip */}
-          <div className="flex flex-wrap items-center gap-6 mt-6 pt-5 border-t border-slate-800/80 text-xs">
-            <div>
-              <div className="text-slate-400 uppercase font-medium">Fullständiga dagar</div>
-              <div className="text-lg font-bold text-white font-mono tabular-nums mt-0.5">
-                {overallStats.completedDaysCount} / 24 <span className="text-xs text-amber-400 font-normal">klara</span>
-              </div>
-            </div>
-            <div>
-              <div className="text-slate-400 uppercase font-medium">Betyg registrerade</div>
-              <div className="text-lg font-bold text-white font-mono tabular-nums mt-0.5">
-                {overallStats.totalRatingsLogged} / {overallStats.totalPossibleRatings}
-              </div>
-            </div>
-            <div>
-              <div className="text-slate-400 uppercase font-medium">Aktiv provsmakare</div>
-              <div className="text-lg font-bold text-amber-300 mt-0.5 flex items-center gap-1.5">
-                <span
-                  className="w-2.5 h-2.5 rounded-full inline-block"
-                  style={{ backgroundColor: activeTester.avatarColor }}
-                />
-                {activeTester.name}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter and Search Controls Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-8">
-        {/* Interactive Filter Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-900/90 rounded-xl border border-slate-800 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setFilterMode('all')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
-              filterMode === 'all'
-                ? 'bg-amber-500 text-slate-950 font-semibold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Alla (24)
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode('pending-me')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
-              filterMode === 'pending-me'
-                ? 'bg-amber-500 text-slate-950 font-semibold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Väntar på mig ({activeTester.name})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode('complete')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
-              filterMode === 'complete'
-                ? 'bg-amber-500 text-slate-950 font-semibold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Alla 4 provat
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterMode('top')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
-              filterMode === 'top'
-                ? 'bg-amber-500 text-slate-950 font-semibold shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            Toppbetyg (≥ 7.0)
-          </button>
         </div>
 
-        {/* Search Input */}
+        {/* Search Bar */}
         <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -192,16 +60,13 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
       {/* 24 Advent Calendar Cards Grid */}
       {filteredBeers.length === 0 ? (
         <div className="rounded-2xl border border-slate-800 bg-[#14201c] p-12 text-center text-slate-400">
-          <p className="text-sm">Inga öl matchade din sökning eller filter.</p>
+          <p className="text-sm">Inga öl matchade din sökning.</p>
           <button
             type="button"
-            onClick={() => {
-              setSearchQuery('');
-              setFilterMode('all');
-            }}
+            onClick={() => setSearchQuery('')}
             className="mt-3 text-xs font-medium text-amber-400 underline hover:text-amber-300"
           >
-            Återställ filter
+            Återställ sökning
           </button>
         </div>
       ) : (
@@ -209,7 +74,6 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
           {filteredBeers.map((beer) => {
             const dayRating = ratings[beer.day] || {};
             const stats = computeDayRatingStats(dayRating);
-            const myRating = dayRating[activeTesterId];
             const scoreStyle = stats.average !== null ? getScoreStyle(stats.average) : null;
 
             return (

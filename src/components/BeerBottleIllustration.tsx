@@ -20,9 +20,9 @@ export const BeerBottleIllustration: React.FC<BeerBottleIllustrationProps> = ({
 
   // Height configurations
   const heightMap = {
-    sm: 'h-28 w-20',
-    md: 'h-48 w-32',
-    lg: 'h-72 w-48',
+    sm: 'h-36 w-24',
+    md: 'h-56 w-36',
+    lg: 'h-80 w-52',
     xl: 'h-96 w-64',
   };
 
@@ -35,22 +35,21 @@ export const BeerBottleIllustration: React.FC<BeerBottleIllustrationProps> = ({
 
   if (beer.imageUrl && !imageFailed) {
     return (
-      <div className={`relative flex items-center justify-center overflow-hidden rounded-xl bg-slate-950/40 p-2 ${heightMap[size]} ${className}`}>
+      <div className={`relative flex items-center justify-center p-1 ${heightMap[size]} ${className}`}>
+        {/* Soft festive glow behind bottle */}
+        <div
+          className="absolute inset-2 -z-10 rounded-full blur-xl opacity-20 pointer-events-none"
+          style={{
+            backgroundColor: scoreStyle ? scoreStyle.color : '#f59e0b',
+          }}
+        />
         <img
           src={beer.imageUrl}
           alt={`${beer.brewery} ${beer.name}`}
           referrerPolicy="no-referrer"
           onError={() => setImageFailed(true)}
-          className="h-full w-full object-contain drop-shadow-lg transition-transform hover:scale-105"
+          className="h-full w-full object-contain drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)] transition-transform duration-200 hover:scale-105"
         />
-        {scoreStyle && (
-          <div
-            className="absolute top-2 right-2 rounded-full px-2 py-0.5 text-xs font-bold shadow-md"
-            style={{ backgroundColor: scoreStyle.color, color: '#fff' }}
-          >
-            {averageScore?.toFixed(1)}
-          </div>
-        )}
       </div>
     );
   }

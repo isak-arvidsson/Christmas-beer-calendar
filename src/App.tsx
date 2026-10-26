@@ -44,7 +44,17 @@ export default function App() {
       const saved = localStorage.getItem(BEERS_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge latest imageUrl and info from INITIAL_BEERS
+          return parsed.map((p: BeerDay) => {
+            const init = INITIAL_BEERS.find((b) => b.day === p.day);
+            return {
+              ...init,
+              ...p,
+              imageUrl: p.imageUrl || init?.imageUrl,
+            };
+          });
+        }
       }
     } catch (e) {
       console.warn('Could not parse saved beers', e);
@@ -202,12 +212,10 @@ export default function App() {
           <CalendarOverview
             beers={beers}
             ratings={ratings}
-            activeTesterId={activeTesterId}
             onSelectDay={(day) => {
               setSelectedDay(day);
               setCurrentView('day');
             }}
-            onOpenSync={() => setIsSyncModalOpen(true)}
           />
         )}
 

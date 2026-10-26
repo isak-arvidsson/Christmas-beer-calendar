@@ -134,11 +134,81 @@ export const DayView: React.FC<DayViewProps> = ({
 
       {/* Main 2-Column Split Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-        {/* Left Column: Beer Showcase Card (5 cols) */}
+        {/* Left Column: Beer Showcase Card with Circular Progress (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <div className="relative rounded-3xl bg-[#14201c] p-6 border border-amber-950/40 shadow-xl overflow-hidden">
             {/* Background Christmas Ribbon Accent */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-radial from-red-600/10 via-transparent to-transparent pointer-events-none" />
+
+            {/* Circular Progress Indicator on top of Beer Image */}
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-800/60">
+              <div className="flex items-center gap-3">
+                {/* SVG Circular Progress Ring */}
+                <div className="relative flex items-center justify-center w-11 h-11 shrink-0">
+                  <svg className="w-11 h-11 -rotate-90" viewBox="0 0 44 44">
+                    <circle
+                      cx="22"
+                      cy="22"
+                      r="18"
+                      fill="none"
+                      stroke="rgba(255, 255, 255, 0.1)"
+                      strokeWidth="3.5"
+                    />
+                    <circle
+                      cx="22"
+                      cy="22"
+                      r="18"
+                      fill="none"
+                      stroke={stats.isComplete ? '#10b981' : '#f59e0b'}
+                      strokeWidth="3.5"
+                      strokeDasharray={113.1}
+                      strokeDashoffset={113.1 - (113.1 * stats.count) / 4}
+                      strokeLinecap="round"
+                      className="transition-all duration-300"
+                    />
+                  </svg>
+                  <span className="absolute text-[11px] font-extrabold font-mono text-white">
+                    {stats.count}/4
+                  </span>
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    {stats.isComplete ? 'Alla har provat!' : `${stats.count} av 4 har provat`}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {TESTERS.map((tester) => {
+                      const hasRated = ratings[tester.id]?.score !== undefined;
+                      return (
+                        <span
+                          key={tester.id}
+                          title={`${tester.name}: ${hasRated ? `${ratings[tester.id]?.score?.toFixed(1)}/10` : 'Ej betygsatt'}`}
+                          className={`flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold transition-all ${
+                            hasRated
+                              ? 'text-slate-950 ring-1 ring-white/60'
+                              : 'opacity-25 bg-slate-800 text-slate-400'
+                          }`}
+                          style={{ backgroundColor: hasRated ? tester.avatarColor : undefined }}
+                        >
+                          {tester.shortName}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {stats.average !== null && (
+                <div className="text-right">
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Snitt</div>
+                  <div
+                    className="text-lg font-extrabold font-mono tabular-nums leading-none"
+                    style={{ color: averageStyle?.color }}
+                  >
+                    {stats.formattedAverage}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Beer Bottle Centerpiece */}
             <div className="flex justify-center py-4">
@@ -202,57 +272,6 @@ export const DayView: React.FC<DayViewProps> = ({
                   </a>
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Group Tasting Summary Widget */}
-          <div className="rounded-2xl bg-[#14201c] p-4 border border-amber-950/40">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                Gruppens status
-              </div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold">
-                {stats.isComplete ? (
-                  <span className="flex items-center gap-1 text-emerald-400">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Alla 4 har betygsatt!
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-amber-400">
-                    <Clock className="w-3.5 h-3.5" />
-                    {stats.count} av 4 har betygsatt
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Tester Avatar Checklist */}
-            <div className="grid grid-cols-4 gap-2 mt-3">
-              {TESTERS.map((tester) => {
-                const r = ratings[tester.id];
-                const hasRated = r !== undefined && typeof r.score === 'number';
-                return (
-                  <div
-                    key={tester.id}
-                    className={`flex flex-col items-center justify-center p-2 rounded-xl border text-center transition-all ${
-                      hasRated
-                        ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
-                        : 'bg-slate-900/40 border-slate-800 text-slate-500'
-                    }`}
-                  >
-                    <span
-                      className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-slate-950 mb-1"
-                      style={{ backgroundColor: tester.avatarColor }}
-                    >
-                      {tester.shortName}
-                    </span>
-                    <span className="text-xs font-medium truncate w-full">{tester.name}</span>
-                    <span className="text-[11px] font-mono tabular-nums mt-0.5 font-bold">
-                      {hasRated ? r.score.toFixed(1) : '–'}
-                    </span>
-                  </div>
-                );
-              })}
             </div>
           </div>
         </div>

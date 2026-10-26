@@ -6,14 +6,13 @@ interface RatingSliderProps {
   value: number; // 0.0 to 10.0
   onChange: (newValue: number) => void;
   disabled?: boolean;
-  tasterName: string;
+  tasterName?: string;
 }
 
 export const RatingSlider: React.FC<RatingSliderProps> = ({
   value,
   onChange,
   disabled = false,
-  tasterName,
 }) => {
   const currentStyle = getScoreStyle(value);
 
@@ -42,21 +41,16 @@ export const RatingSlider: React.FC<RatingSliderProps> = ({
         boxShadow: currentStyle.glow,
       }}
     >
-      {/* Header with Tester Name & Live Numeric Score */}
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <div>
-          <div className="text-xs uppercase tracking-wider text-slate-400 font-medium">
-            Betygsätt som <span className="font-semibold text-slate-200">{tasterName}</span>
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-sm font-medium" style={{ color: currentStyle.color }}>
-              {currentStyle.label}
-            </span>
-            <span className="text-slate-500 text-xs">·</span>
-            <span className="text-xs text-slate-400 italic">
-              {currentStyle.adjective}
-            </span>
-          </div>
+      {/* Header with Sensory Label & Live Numeric Score */}
+      <div className="flex items-center justify-between gap-4 mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold" style={{ color: currentStyle.color }}>
+            {currentStyle.label}
+          </span>
+          <span className="text-slate-500 text-xs">·</span>
+          <span className="text-xs text-slate-400 italic">
+            {currentStyle.adjective}
+          </span>
         </div>
 
         {/* Large Score Display with 1-decimal accuracy */}
@@ -95,7 +89,7 @@ export const RatingSlider: React.FC<RatingSliderProps> = ({
           value={value}
           onChange={handleChange}
           disabled={disabled}
-          aria-label={`Betyg för ${tasterName}`}
+          aria-label="Betyg 0.0 till 10.0"
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
           style={{ zIndex: 10 }}
         />
@@ -120,56 +114,28 @@ export const RatingSlider: React.FC<RatingSliderProps> = ({
         </div>
       </div>
 
-      {/* Granular Step Controls and Min/Max Scale */}
-      <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-800/80">
-        {/* Scale labels */}
-        <div className="flex items-center gap-3 text-xs text-slate-400 font-mono tabular-nums">
-          <span className="text-sky-400 font-semibold">0.0 (Kall)</span>
-          <span>5.0</span>
-          <span className="text-red-400 font-semibold">10.0 (Guld)</span>
-        </div>
-
-        {/* Quick Granular Adjusters */}
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleStep(-0.5)}
-            disabled={disabled || value <= 0}
-            className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors border border-slate-800"
-            title="Minska med 0.5"
-          >
-            <Minus className="w-3 h-3" />
-            0.5
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStep(-0.1)}
-            disabled={disabled || value <= 0}
-            className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors border border-slate-800"
-            title="Minska med 0.1"
-          >
-            -0.1
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStep(0.1)}
-            disabled={disabled || value >= 10}
-            className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors border border-slate-800"
-            title="Öka med 0.1"
-          >
-            +0.1
-          </button>
-          <button
-            type="button"
-            onClick={() => handleStep(0.5)}
-            disabled={disabled || value >= 10}
-            className="flex items-center gap-0.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors border border-slate-800"
-            title="Öka med 0.5"
-          >
-            <Plus className="w-3 h-3" />
-            0.5
-          </button>
-        </div>
+      {/* Granular Step Controls (±0.1) */}
+      <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-800/80">
+        <button
+          type="button"
+          onClick={() => handleStep(-0.1)}
+          disabled={disabled || value <= 0}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors border border-slate-800"
+          title="Minska med 0.1"
+        >
+          <Minus className="w-3 h-3" />
+          0.1
+        </button>
+        <button
+          type="button"
+          onClick={() => handleStep(0.1)}
+          disabled={disabled || value >= 10}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors border border-slate-800"
+          title="Öka med 0.1"
+        >
+          <Plus className="w-3 h-3" />
+          0.1
+        </button>
       </div>
     </div>
   );
