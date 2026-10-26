@@ -1,0 +1,6 @@
+{
+  "name": "Julölskalendern",
+  "description": "Christmas beer calendar and live tasting leaderboard for Isak, Ingrid, Gustav, and Louise with 0.0-10.0 intensity scoring and Google Sheets sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
