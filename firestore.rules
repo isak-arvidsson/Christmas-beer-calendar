@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Endast de 6 godkända användarkontona har åtkomst till databasen
+    function isAllowedMember() {
+      return isSignedIn() && request.auth.uid in [
+        '5JjzD1JSsUgm1n8eTtnddVNwV6o1',
+        'EMN2zWXa1lfLvLb5iEBhLHqTmfH3',
+        'AFNZzoVlW2QLYlMG6P7CSOvyC7B3',
+        'E40cfEwuIfebmZRhlLA0LpCq9Gl2',
+        'lhunVK0FapdpwQRRrSSDTLCV0Il1',
+        'J5DtURz7G4hjd9cfTI9rmgbHURB3'
+      ];
+    }
+
+    function isOwner(userId) {
+      return isAllowedMember() && request.auth.uid == userId;
+    }
+
+    function isValidTesterId(testerId) {
+      return testerId is string && testerId in ['isak', 'ingrid', 'gustav', 'louise', 'ludwig', 'emil'];
+    }
+
+    function isValidRating(data) {
+      return data.keys().hasAll(['calendarId', 'day', 'testerId', 'score', 'updatedByUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['calendarId', 'day', 'testerId', 'score', 'notes', 'flavorTags', 'updatedByUid', 'createdAt', 'updatedAt'])
+        && data.calendarId is string
+        && data.calendarId.size() <= 32
+        && data.calendarId == 'julol-2026'
+        && data.day is int
+        && data.day >= 1 && data.day <= 24
+        && isValidTesterId(data.testerId)
+        && data.score is number
+        && data.score >= 0 && data.score <= 10
+        && data.updatedByUid is string
+        && data.updatedByUid.size() <= 128
+        && data.updatedByUid == request.auth.uid
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
+        && (!('flavorTags' in data) || (
+          data.flavorTags is list
+          && data.flavorTags.size() <= 20
+          && (data.flavorTags.size() == 0 || (data.flavorTags[0] is string && data.flavorTags[0].size() <= 64))
+        ))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['selectedTesterId', 'updatedAt'])
+        && data.keys().hasOnly(['selectedTesterId', 'updatedAt'])
+        && isValidTesterId(data.selectedTesterId)
+        && data.updatedAt is timestamp;
+    }
+
+    // Shared Christmas beer ratings (joint source of truth)
+    match /ratings/{ratingId} {
+      allow get: if isAllowedMember() && isValidId(ratingId) && (resource == null || existing().calendarId == 'julol-2026');
+      allow list: if isAllowedMember() && resource.data.calendarId == 'julol-2026';
+
+      allow create: if isAllowedMember()
+        && isValidId(ratingId)
+        && isValidRating(incoming())
+        && ratingId == ('day_' + string(incoming().day) + '_' + incoming().testerId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isAllowedMember()
+        && isValidId(ratingId)
+        && isValidRating(incoming())
+        && incoming().calendarId == existing().calendarId
+        && incoming().day == existing().day
+        && incoming().testerId == existing().testerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['score', 'notes', 'flavorTags', 'updatedByUid', 'updatedAt']);
+
+      allow delete: if false;
+    }
+
+    // Private user preference (selected taster profile)
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['selectedTesterId', 'updatedAt']);
+
+      allow delete: if false;
+    }
+  }
+}

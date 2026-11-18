@@ -1,7 +1,19 @@
 import React, { useState } from 'react';
-import { Calendar, Award, Beer, RefreshCw, UserCheck, ChevronDown, Check } from 'lucide-react';
-import { Tester, TesterId } from '../types.ts';
+import { User } from 'firebase/auth';
+import {
+  Calendar,
+  Award,
+  Beer,
+  RefreshCw,
+  ChevronDown,
+  Check,
+  LogIn,
+  LogOut,
+  Cloud,
+} from 'lucide-react';
+import { TesterId } from '../types.ts';
 import { TESTERS } from '../data/initialBeers.ts';
+import { formatDisplayUsername } from '../firebase.ts';
 
 interface HeaderProps {
   currentView: 'calendar' | 'day' | 'leaderboard';
@@ -11,6 +23,10 @@ interface HeaderProps {
   onOpenSyncModal: () => void;
   syncStatus: 'idle' | 'syncing' | 'success' | 'error';
   selectedDay: number;
+  authUser: User | null;
+  onSignIn: () => void;
+  onSignOut: () => void;
+  isSigningIn: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -21,6 +37,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSyncModal,
   syncStatus,
   selectedDay,
+  authUser,
+  onSignIn,
+  onSignOut,
+  isSigningIn,
 }) => {
   const [isTesterMenuOpen, setIsTesterMenuOpen] = useState(false);
   const activeTester = TESTERS.find((t) => t.id === activeTesterId) || TESTERS[0];
@@ -85,12 +105,12 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </nav>
 
-        {/* Zone 3: 1 Primary Action — Active Tester Persona Switcher */}
+        {/* Zone 3: Active Tester Persona Switcher & Account Menu */}
         <div className="relative shrink-0">
           <button
             type="button"
             onClick={() => setIsTesterMenuOpen(!isTesterMenuOpen)}
-            className="flex items-center gap-2 rounded-xl bg-slate-900/90 px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-200 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-800 transition-all shadow-sm"
+            className="flex items-center gap-2 rounded-xl bg-slate-900/90 px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-200 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-800 transition-all shadow-sm whitespace-nowrap shrink-0"
             aria-expanded={isTesterMenuOpen}
           >
             <span
@@ -104,18 +124,18 @@ export const Header: React.FC<HeaderProps> = ({
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
           </button>
 
-          {/* Persona Switcher Dropdown */}
+          {/* Persona Switcher & Auth Dropdown */}
           {isTesterMenuOpen && (
             <>
               <div
                 className="fixed inset-0 z-40"
                 onClick={() => setIsTesterMenuOpen(false)}
               />
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#14201c] p-2 text-slate-200 shadow-2xl border border-amber-950/50 z-50 animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#14201c] p-2 text-slate-200 shadow-2xl border border-amber-950/50 z-50">
                 <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-amber-400/80 border-b border-slate-800/80">
                   Vem sätter betyg nu?
                 </div>
-                <div className="mt-1 space-y-1">
+                <div className="mt-1 space-y-1 max-h-80 overflow-y-auto">
                   {TESTERS.map((tester) => {
                     const isSelected = tester.id === activeTesterId;
                     return (
@@ -134,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
                       >
                         <div className="flex items-center gap-2.5">
                           <span
-                            className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-slate-950 shadow-sm"
+                            className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-slate-950 shadow-sm shrink-0"
                             style={{ backgroundColor: tester.avatarColor }}
                           >
                             {tester.shortName}
@@ -144,10 +164,51 @@ export const Header: React.FC<HeaderProps> = ({
                             <div className="text-[10px] text-slate-400">{tester.favoriteStyle}</div>
                           </div>
                         </div>
-                        {isSelected && <Check className="w-4 h-4 text-amber-400" />}
+                        {isSelected && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Shared Database Auth Section */}
+                <div className="mt-2 pt-2 border-t border-slate-800/80 px-2 pb-1">
+                  {authUser ? (
+                    <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-950/60 px-3 py-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400">
+                          <Cloud className="w-3.5 h-3.5 shrink-0" />
+                          <span>Synkad databas</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 truncate">
+                          {formatDisplayUsername(authUser.email, authUser.displayName)}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsTesterMenuOpen(false);
+                          onSignOut();
+                        }}
+                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors shrink-0"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Logga ut</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={isSigningIn}
+                      onClick={() => {
+                        setIsTesterMenuOpen(false);
+                        onSignIn();
+                      }}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors disabled:opacity-60"
+                    >
+                      <LogIn className="w-3.5 h-3.5" />
+                      <span>{isSigningIn ? 'Loggar in...' : 'Logga in'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </>

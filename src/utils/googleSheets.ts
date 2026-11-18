@@ -86,6 +86,8 @@ export function parseBeersFromCsv(
   const ingridIdx = header.findIndex((h) => h.includes('ingrid'));
   const gustavIdx = header.findIndex((h) => h.includes('gustav'));
   const louiseIdx = header.findIndex((h) => h.includes('louise'));
+  const ludwigIdx = header.findIndex((h) => h.includes('ludwig'));
+  const emilIdx = header.findIndex((h) => h.includes('emil'));
 
   const parsedBeers: BeerDay[] = [];
   const ratingsPatch: CalendarRatings = {};
@@ -127,6 +129,8 @@ export function parseBeersFromCsv(
       ['ingrid', ingridIdx],
       ['gustav', gustavIdx],
       ['louise', louiseIdx],
+      ['ludwig', ludwigIdx],
+      ['emil', emilIdx],
     ];
 
     for (const [testerId, colIdx] of testerIndices) {
@@ -168,6 +172,8 @@ export function exportCalendarToCsv(beers: BeerDay[], ratings: CalendarRatings):
     'Ingrid',
     'Gustav',
     'Louise',
+    'Ludwig',
+    'Emil',
     'Medelbetyg',
   ];
 
@@ -186,10 +192,17 @@ export function exportCalendarToCsv(beers: BeerDay[], ratings: CalendarRatings):
     const ingridScore = dayRating.ingrid?.score ?? '';
     const gustavScore = dayRating.gustav?.score ?? '';
     const louiseScore = dayRating.louise?.score ?? '';
+    const ludwigScore = dayRating.ludwig?.score ?? '';
+    const emilScore = dayRating.emil?.score ?? '';
 
-    const validScores = [isakScore, ingridScore, gustavScore, louiseScore].filter(
-      (s): s is number => typeof s === 'number'
-    );
+    const validScores = [
+      isakScore,
+      ingridScore,
+      gustavScore,
+      louiseScore,
+      ludwigScore,
+      emilScore,
+    ].filter((s): s is number => typeof s === 'number');
     const avg = validScores.length > 0 ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1) : '';
 
     return [
@@ -205,6 +218,8 @@ export function exportCalendarToCsv(beers: BeerDay[], ratings: CalendarRatings):
       escapeCell(ingridScore),
       escapeCell(gustavScore),
       escapeCell(louiseScore),
+      escapeCell(ludwigScore),
+      escapeCell(emilScore),
       escapeCell(avg),
     ].join(',');
   });

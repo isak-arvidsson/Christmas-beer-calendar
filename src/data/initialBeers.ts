@@ -33,6 +33,22 @@ export const TESTERS: Tester[] = [
     accentBg: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     favoriteStyle: 'Imperial Stout & Dunkel',
   },
+  {
+    id: 'ludwig',
+    name: 'Ludwig',
+    shortName: 'LU',
+    avatarColor: '#a855f7', // Winter violet
+    accentBg: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+    favoriteStyle: 'Jul-IPA & Mörk Ale',
+  },
+  {
+    id: 'emil',
+    name: 'Emil',
+    shortName: 'EM',
+    avatarColor: '#fb7185', // Lingonberry coral
+    accentBg: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    favoriteStyle: 'Klassisk Julöl & Bock',
+  },
 ];
 
 export const INITIAL_BEERS: BeerDay[] = [

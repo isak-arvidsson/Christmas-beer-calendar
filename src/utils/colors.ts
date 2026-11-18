@@ -112,19 +112,21 @@ export function getSliderTrackBackground(score: number): string {
  * Computes average, completion count, and standard deviation
  */
 export function computeDayRatingStats(ratings: DayRatings) {
-  const testers: TesterId[] = ['isak', 'ingrid', 'gustav', 'louise'];
+  const testers: TesterId[] = ['isak', 'ingrid', 'gustav', 'louise', 'ludwig', 'emil'];
+  const totalTesters = testers.length;
   const activeEntries = testers
     .map((id) => ratings[id])
     .filter((r): r is NonNullable<typeof r> => r !== undefined && typeof r.score === 'number');
 
   const count = activeEntries.length;
-  const isComplete = count === 4;
+  const isComplete = count === totalTesters;
 
   if (count === 0) {
     return {
       average: null,
       formattedAverage: '–',
       count: 0,
+      totalTesters,
       isComplete: false,
       stdDev: null,
       highScore: null,
@@ -147,6 +149,7 @@ export function computeDayRatingStats(ratings: DayRatings) {
     average,
     formattedAverage: average.toFixed(1),
     count,
+    totalTesters,
     isComplete,
     stdDev,
     highScore,

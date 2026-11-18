@@ -27,6 +27,10 @@ interface DayViewProps {
   activeTesterId: TesterId;
   onUpdateRating: (day: number, testerId: TesterId, rating: UserRating) => void;
   onNavigateDay: (day: number) => void;
+  isAuthenticated: boolean;
+  onSignIn: () => void;
+  isSigningIn: boolean;
+  savingState: 'idle' | 'saving' | 'saved' | 'error';
 }
 
 export const DayView: React.FC<DayViewProps> = ({
@@ -37,6 +41,10 @@ export const DayView: React.FC<DayViewProps> = ({
   activeTesterId,
   onUpdateRating,
   onNavigateDay,
+  isAuthenticated,
+  onSignIn,
+  isSigningIn,
+  savingState,
 }) => {
   const activeTester = TESTERS.find((t) => t.id === activeTesterId) || TESTERS[0];
   const userCurrentRating = ratings[activeTesterId];
@@ -47,13 +55,16 @@ export const DayView: React.FC<DayViewProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>(userCurrentRating?.flavorTags ?? []);
   const [blindMode, setBlindMode] = useState<boolean>(false);
   const [hasSavedFeedback, setHasSavedFeedback] = useState<boolean>(false);
+  const isEditingNotesRef = React.useRef<boolean>(false);
 
-  // Sync local state if active tester changes or beer day changes
+  // Sync local state if active tester changes, beer day changes, or remote score updates
   React.useEffect(() => {
     const existing = ratings[activeTesterId];
     setSliderScore(existing?.score ?? 7.0);
-    setTastingNotes(existing?.notes ?? '');
     setSelectedTags(existing?.flavorTags ?? []);
+    if (!isEditingNotesRef.current) {
+      setTastingNotes(existing?.notes ?? '');
+    }
   }, [day, activeTesterId, ratings]);
 
   const stats = computeDayRatingStats(ratings);
@@ -61,6 +72,7 @@ export const DayView: React.FC<DayViewProps> = ({
 
   // Handle immediate slider change
   const handleScoreChange = (newScore: number) => {
+    if (!isAuthenticated) return;
     setSliderScore(newScore);
     onUpdateRating(day, activeTesterId, {
       score: newScore,
@@ -73,6 +85,7 @@ export const DayView: React.FC<DayViewProps> = ({
   };
 
   const handleToggleTag = (tag: string) => {
+    if (!isAuthenticated) return;
     const nextTags = selectedTags.includes(tag)
       ? selectedTags.filter((t) => t !== tag)
       : [...selectedTags, tag];
@@ -86,6 +99,8 @@ export const DayView: React.FC<DayViewProps> = ({
   };
 
   const handleNotesBlur = () => {
+    isEditingNotesRef.current = false;
+    if (!isAuthenticated) return;
     onUpdateRating(day, activeTesterId, {
       score: sliderScore,
       notes: tastingNotes,
@@ -162,18 +177,20 @@ export const DayView: React.FC<DayViewProps> = ({
                       stroke={stats.isComplete ? '#10b981' : '#f59e0b'}
                       strokeWidth="3.5"
                       strokeDasharray={113.1}
-                      strokeDashoffset={113.1 - (113.1 * stats.count) / 4}
+                      strokeDashoffset={113.1 - (113.1 * stats.count) / stats.totalTesters}
                       strokeLinecap="round"
                       className="transition-all duration-300"
                     />
                   </svg>
                   <span className="absolute text-[11px] font-extrabold font-mono text-white">
-                    {stats.count}/4
+                    {stats.count}/{stats.totalTesters}
                   </span>
                 </div>
                 <div>
                   <div className="text-xs font-bold text-slate-200">
-                    {stats.isComplete ? 'Alla har provat!' : `${stats.count} av 4 har provat`}
+                    {stats.isComplete
+                      ? 'Alla har provat!'
+                      : `${stats.count} av ${stats.totalTesters} har provat`}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1">
                     {TESTERS.map((tester) => {
@@ -283,9 +300,14 @@ export const DayView: React.FC<DayViewProps> = ({
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <span>Ditt betyg</span>
-                {hasSavedFeedback && (
-                  <span className="text-xs font-normal text-emerald-400 animate-pulse">
-                    Sparat!
+                {savingState === 'saving' && (
+                  <span className="text-xs font-normal text-amber-400">
+                    Sparar till databasen...
+                  </span>
+                )}
+                {(savingState === 'saved' || (hasSavedFeedback && savingState === 'idle')) && isAuthenticated && (
+                  <span className="text-xs font-normal text-emerald-400">
+                    Sparat i databasen
                   </span>
                 )}
               </h2>
@@ -302,10 +324,32 @@ export const DayView: React.FC<DayViewProps> = ({
               </button>
             </div>
 
+            {!isAuthenticated && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-200">
+                <div>
+                  <div className="font-semibold text-amber-300">
+                    Logga in för att spara & se gruppens betyg
+                  </div>
+                  <div className="text-slate-300 mt-0.5">
+                    Logga in med ditt användarnamn och lösenord så att {activeTester.name}s betyg synkas till den gemensamma databasen.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onSignIn}
+                  disabled={isSigningIn}
+                  className="shrink-0 rounded-xl bg-amber-500 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors disabled:opacity-60"
+                >
+                  {isSigningIn ? 'Loggar in...' : 'Logga in'}
+                </button>
+              </div>
+            )}
+
             {/* Chromatic Rating Slider */}
             <RatingSlider
               value={sliderScore}
               onChange={handleScoreChange}
+              disabled={!isAuthenticated}
               tasterName={activeTester.name}
             />
 
@@ -325,8 +369,9 @@ export const DayView: React.FC<DayViewProps> = ({
                     <button
                       key={tag}
                       type="button"
+                      disabled={!isAuthenticated}
                       onClick={() => handleToggleTag(tag)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                         isSelected
                           ? 'bg-amber-500 text-slate-950 font-semibold shadow-sm'
                           : 'bg-slate-900/80 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
@@ -342,11 +387,16 @@ export const DayView: React.FC<DayViewProps> = ({
               <div className="mt-4">
                 <textarea
                   rows={2}
+                  disabled={!isAuthenticated}
+                  maxLength={1000}
                   placeholder={`Skriv ${activeTester.name}s tankar om doft, skum, sötma eller julbordsmatchning...`}
                   value={tastingNotes}
+                  onFocus={() => {
+                    isEditingNotesRef.current = true;
+                  }}
                   onChange={(e) => setTastingNotes(e.target.value)}
                   onBlur={handleNotesBlur}
-                  className="w-full rounded-xl bg-slate-950 border border-slate-800 p-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
+                  className="w-full rounded-xl bg-slate-950 border border-slate-800 p-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -379,7 +429,7 @@ export const DayView: React.FC<DayViewProps> = ({
                   Blindprovningsläge påslaget
                 </div>
                 <div className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  Sätt ditt eget betyg ovan för att avslöja vad Isak, Ingrid, Gustav och Louise tyckte!
+                  Sätt ditt eget betyg ovan för att avslöja vad övriga i gruppen tyckte!
                 </div>
               </div>
             ) : (

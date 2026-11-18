@@ -142,10 +142,10 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
                   </div>
                 </div>
 
-                {/* Bottom Footer: 4-Tester Completion Status */}
+                {/* Bottom Footer: 6-Tester Completion Status */}
                 <div className="mt-4 pt-3 border-t border-slate-800/80">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-1">
                       {TESTERS.map((tester) => {
                         const hasRated = dayRating[tester.id]?.score !== undefined;
                         return (
@@ -167,14 +167,16 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
                       })}
                     </div>
 
-                    <div className="text-[11px] text-slate-400 font-medium">
+                    <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap shrink-0">
                       {stats.isComplete ? (
                         <span className="text-emerald-400 font-semibold flex items-center gap-1">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          Alla 4
+                          Alla {stats.totalTesters}
                         </span>
                       ) : (
-                        <span>{stats.count}/4 provat</span>
+                        <span>
+                          {stats.count}/{stats.totalTesters} provat
+                        </span>
                       )}
                     </div>
                   </div>

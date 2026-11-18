@@ -27,7 +27,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   onSelectDay,
 }) => {
   const [sortOption, setSortOption] = useState<
-    'average' | 'count' | 'highest-single' | 'isak' | 'ingrid' | 'gustav' | 'louise'
+    'average' | 'count' | 'highest-single' | TesterId
   >('average');
 
   // Compute stats for all beers
@@ -90,7 +90,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           Hantverksölen Som Regerar Julbordet
         </h1>
         <p className="mt-2 text-sm text-slate-300">
-          Realtidssummering av Isaks, Ingrids, Gustavs och Louises provsmakningar.
+          Realtidssummering av Isaks, Ingrids, Gustavs, Louises, Ludwigs och Emils provsmakningar.
         </p>
       </div>
 
@@ -151,7 +151,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                   {top1.stats.formattedAverage} <span className="text-xs text-slate-500">/10</span>
                 </div>
                 <div className="text-[11px] text-emerald-400 mt-1 font-medium">
-                  {top1.stats.count}/4 provsmakare har satt betyg
+                  {top1.stats.count}/{top1.stats.totalTesters} provsmakare har satt betyg
                 </div>
               </div>
             </div>
@@ -259,18 +259,11 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                 <th scope="col" className="py-3.5 px-3 font-medium text-center">
                   Snitt
                 </th>
-                <th scope="col" className="py-3.5 px-2 font-medium text-center">
-                  Isak
-                </th>
-                <th scope="col" className="py-3.5 px-2 font-medium text-center">
-                  Ingrid
-                </th>
-                <th scope="col" className="py-3.5 px-2 font-medium text-center">
-                  Gustav
-                </th>
-                <th scope="col" className="py-3.5 px-2 font-medium text-center">
-                  Louise
-                </th>
+                {TESTERS.map((tester) => (
+                  <th key={tester.id} scope="col" className="py-3.5 px-2 font-medium text-center">
+                    {tester.name}
+                  </th>
+                ))}
                 <th scope="col" className="py-3.5 pr-4 pl-2 font-medium text-right">
                   Status
                 </th>
@@ -334,13 +327,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                       )}
                     </td>
 
-                    {/* Individual scores for Isak, Ingrid, Gustav, Louise */}
-                    {(['isak', 'ingrid', 'gustav', 'louise'] as TesterId[]).map((testerId) => {
-                      const score = dayRating[testerId]?.score;
+                    {/* Individual scores for all 6 testers */}
+                    {TESTERS.map((tester) => {
+                      const score = dayRating[tester.id]?.score;
                       const hasScore = typeof score === 'number';
                       const testerStyle = hasScore ? getScoreStyle(score) : null;
                       return (
-                        <td key={testerId} className="py-4 px-2 text-center font-mono tabular-nums">
+                        <td key={tester.id} className="py-4 px-2 text-center font-mono tabular-nums">
                           {hasScore ? (
                             <span
                               className="text-xs font-bold"
@@ -358,7 +351,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     {/* Completion count & chevron */}
                     <td className="py-4 pr-4 pl-2 text-right">
                       <div className="inline-flex items-center gap-2 text-xs text-slate-400">
-                        <span className="font-mono tabular-nums">{stats.count}/4</span>
+                        <span className="font-mono tabular-nums">
+                          {stats.count}/{stats.totalTesters}
+                        </span>
                         <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-amber-400 transition-colors" />
                       </div>
                     </td>

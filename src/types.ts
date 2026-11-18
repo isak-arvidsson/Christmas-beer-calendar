@@ -1,4 +1,4 @@
-export type TesterId = 'isak' | 'ingrid' | 'gustav' | 'louise';
+export type TesterId = 'isak' | 'ingrid' | 'gustav' | 'louise' | 'ludwig' | 'emil';
 
 export interface Tester {
   id: TesterId;
@@ -27,6 +27,7 @@ export interface UserRating {
   notes?: string;
   flavorTags?: string[];
   ratedAt: string;
+  updatedByUid?: string;
 }
 
 export type DayRatings = Partial<Record<TesterId, UserRating>>;

@@ -1,0 +1,83 @@
+{
+  "entities": {
+    "Rating": {
+      "title": "Beer Rating",
+      "description": "A single tester's rating, flavor tags, and tasting notes for a specific day's Christmas beer.",
+      "type": "object",
+      "properties": {
+        "calendarId": {
+          "type": "string",
+          "description": "Shared calendar identifier",
+          "pattern": "^julol-2026$",
+          "maxLength": 32
+        },
+        "day": {
+          "type": "integer",
+          "description": "Calendar day from 1 to 24"
+        },
+        "testerId": {
+          "type": "string",
+          "enum": ["isak", "ingrid", "gustav", "louise", "ludwig", "emil"],
+          "description": "Profile ID of the taster"
+        },
+        "score": {
+          "type": "number",
+          "description": "Score from 0.0 to 10.0 with 0.1 accuracy"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Optional tasting notes"
+        },
+        "flavorTags": {
+          "type": "array",
+          "description": "Optional flavor tags (max 20)"
+        },
+        "updatedByUid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth UID of the user who wrote this rating"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last-updated timestamp"
+        }
+      },
+      "required": ["calendarId", "day", "testerId", "score", "updatedByUid", "createdAt", "updatedAt"]
+    },
+    "UserProfile": {
+      "title": "User Profile Preference",
+      "description": "Private user preference storing the user's selected tasting profile.",
+      "type": "object",
+      "properties": {
+        "selectedTesterId": {
+          "type": "string",
+          "enum": ["isak", "ingrid", "gustav", "louise", "ludwig", "emil"],
+          "description": "Active taster profile selected by this user"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last-updated timestamp"
+        }
+      },
+      "required": ["selectedTesterId", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/ratings/{ratingId}": {
+      "schema": { "$ref": "#/entities/Rating" },
+      "description": "Shared ratings collection keyed by day_{day}_{testerId} serving as the joint source of truth."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private per-user preferences keyed by Firebase Auth UID."
+    }
+  }
+}
