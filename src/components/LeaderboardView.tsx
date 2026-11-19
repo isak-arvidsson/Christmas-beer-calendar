@@ -91,18 +91,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      {/* Title & Introduction */}
+      {/* Title */}
       <div className="text-center max-w-2xl mx-auto mb-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold uppercase tracking-wider mb-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold uppercase tracking-wider">
           <Trophy className="w-3.5 h-3.5" />
           Julens Stora Topplista
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white font-cinzel tracking-tight">
-          Hantverksölen Som Regerar Julbordet
-        </h1>
-        <p className="mt-2 text-sm text-slate-300">
-          Realtidssummering av Emils, Gustavs, Hannas, Ingrids, Isaks, Louises och Ludwigs provsmakningar.
-        </p>
       </div>
 
       {/* Top 3 Festive Podium */}
