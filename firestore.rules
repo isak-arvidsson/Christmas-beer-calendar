@@ -96,7 +96,10 @@ service cloud.firestore {
         && incoming().updatedAt == request.time
         && incoming().diff(existing()).affectedKeys().hasOnly(['score', 'notes', 'flavorTags', 'updatedByUid', 'updatedAt']);
 
-      allow delete: if false;
+      allow delete: if isAllowedMember()
+        && isValidId(ratingId)
+        && existing().calendarId == 'julol-2026'
+        && existing().updatedByUid == request.auth.uid;
     }
 
     // Private user preference (selected taster profile)

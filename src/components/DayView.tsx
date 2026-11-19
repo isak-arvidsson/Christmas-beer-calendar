@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
   Thermometer,
   MapPin,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { BeerDay, DayRatings, TesterId, UserRating } from '../types.ts';
 import { TESTERS, FLAVOR_TAGS } from '../data/initialBeers.ts';
@@ -19,6 +21,7 @@ interface DayViewProps {
   ratings: DayRatings;
   activeTesterId: TesterId;
   onUpdateRating: (day: number, testerId: TesterId, rating: UserRating) => void;
+  onClearRating: (day: number, testerId: TesterId) => Promise<void> | void;
   onNavigateDay: (day: number) => void;
   isAuthenticated: boolean;
   onSignIn: () => void;
@@ -33,6 +36,7 @@ export const DayView: React.FC<DayViewProps> = ({
   ratings,
   activeTesterId,
   onUpdateRating,
+  onClearRating,
   onNavigateDay,
   isAuthenticated,
   onSignIn,
@@ -48,10 +52,12 @@ export const DayView: React.FC<DayViewProps> = ({
   const [tastingNotes, setTastingNotes] = useState<string>(userCurrentRating?.notes ?? '');
   const [selectedTags, setSelectedTags] = useState<string[]>(userCurrentRating?.flavorTags ?? []);
   const [hasSavedFeedback, setHasSavedFeedback] = useState<boolean>(false);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState<boolean>(false);
+  const [isClearing, setIsClearing] = useState<boolean>(false);
   const isEditingNotesRef = React.useRef<boolean>(false);
 
   // Sync local state if active tester changes, beer day changes, or remote score updates
-  React.useEffect(() => {
+  useEffect(() => {
     const existing = ratings[activeTesterId];
     setSliderScore(existing?.score ?? 7.0);
     setSelectedTags(existing?.flavorTags ?? []);
@@ -59,6 +65,36 @@ export const DayView: React.FC<DayViewProps> = ({
       setTastingNotes(existing?.notes ?? '');
     }
   }, [day, activeTesterId, ratings]);
+
+  // Close clear dialog when switching day or pressing Escape
+  useEffect(() => {
+    setIsClearDialogOpen(false);
+  }, [day, activeTesterId]);
+
+  useEffect(() => {
+    if (!isClearDialogOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isClearing) {
+        setIsClearDialogOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isClearDialogOpen, isClearing]);
+
+  const handleConfirmClear = async () => {
+    if (!isAuthenticated || isClearing) return;
+    setIsClearing(true);
+    try {
+      await onClearRating(day, activeTesterId);
+      setSliderScore(7.0);
+      setTastingNotes('');
+      setSelectedTags([]);
+      setIsClearDialogOpen(false);
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const stats = computeDayRatingStats(ratings);
   const averageStyle = stats.average !== null ? getScoreStyle(stats.average) : null;
@@ -94,6 +130,7 @@ export const DayView: React.FC<DayViewProps> = ({
   const handleNotesBlur = () => {
     isEditingNotesRef.current = false;
     if (!isAuthenticated) return;
+    if (!userHasRated && tastingNotes.trim() === '' && selectedTags.length === 0) return;
     onUpdateRating(day, activeTesterId, {
       score: sliderScore,
       notes: tastingNotes,
@@ -298,7 +335,7 @@ export const DayView: React.FC<DayViewProps> = ({
         <div className="lg:col-span-7 space-y-6">
           {/* Active Tester Rating Box */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <span>Ditt betyg</span>
                 {savingState === 'saving' && (
@@ -312,6 +349,18 @@ export const DayView: React.FC<DayViewProps> = ({
                   </span>
                 )}
               </h2>
+
+              {isAuthenticated && userHasRated && (
+                <button
+                  type="button"
+                  onClick={() => setIsClearDialogOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:text-red-300 bg-slate-900/70 hover:bg-red-950/40 border border-slate-800 hover:border-red-500/40 transition-colors shrink-0"
+                  title={`Rensa ditt betyg för Dag ${day}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Rensa betyg</span>
+                </button>
+              )}
             </div>
 
             {!isAuthenticated && (
@@ -496,6 +545,70 @@ export const DayView: React.FC<DayViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Clear Rating Confirmation Dialog */}
+      {isClearDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+          onClick={() => !isClearing && setIsClearDialogOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="clear-rating-dialog-title"
+        >
+          <div
+            className="relative w-full max-w-sm rounded-3xl bg-[#14201c] p-6 border border-amber-950/60 shadow-2xl text-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              disabled={isClearing}
+              onClick={() => setIsClearDialogOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+              aria-label="Stäng"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/15 text-red-400 border border-red-500/30 shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </span>
+              <div>
+                <h2 id="clear-rating-dialog-title" className="text-lg font-bold text-white font-cinzel">
+                  Rensa betyg?
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Dag {day} · {beer.name}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+              Ditt betyg ({userCurrentRating?.score.toFixed(1)}/10), smaknoteringar och kommentarer för den här dagen tas bort från databasen.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={isClearing}
+                onClick={() => setIsClearDialogOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
+              >
+                Avbryt
+              </button>
+              <button
+                type="button"
+                disabled={isClearing}
+                onClick={handleConfirmClear}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-500 transition-colors shadow-md disabled:opacity-60"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isClearing ? 'Rensar...' : 'Rensa betyg'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

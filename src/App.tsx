@@ -10,6 +10,7 @@ import { LeaderboardView } from './components/LeaderboardView.tsx';
 import { LoginScreen } from './components/LoginScreen.tsx';
 import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 import {
+  deleteRatingFromFirestore,
   inferTesterIdFromEmail,
   isValidTesterId,
   loadUserProfilePreference,
@@ -293,6 +294,61 @@ export default function App() {
     }, 300);
   };
 
+  // Clear the active tester's rating for a specific day in Firestore
+  const handleClearRating = async (day: number, testerId: TesterId) => {
+    if (!authUser || testerId !== activeTesterId) return;
+
+    const writeKey = `${day}_${testerId}`;
+    if (pendingTimersRef.current[writeKey]) {
+      clearTimeout(pendingTimersRef.current[writeKey]);
+      delete pendingTimersRef.current[writeKey];
+    }
+    delete pendingPayloadsRef.current[writeKey];
+
+    // Optimistic removal in memory
+    setRatings((prev) => {
+      const existingDay = prev[day];
+      if (!existingDay || existingDay[testerId] === undefined) return prev;
+      const nextDay = { ...existingDay };
+      delete nextDay[testerId];
+      return {
+        ...prev,
+        [day]: nextDay,
+      };
+    });
+
+    setSavingState('saving');
+    if (savedResetTimerRef.current) {
+      clearTimeout(savedResetTimerRef.current);
+      savedResetTimerRef.current = null;
+    }
+
+    activeWritesCountRef.current += 1;
+    try {
+      await deleteRatingFromFirestore(day, testerId);
+      setDbError(null);
+      activeWritesCountRef.current = Math.max(0, activeWritesCountRef.current - 1);
+      if (activeWritesCountRef.current === 0 && Object.keys(pendingTimersRef.current).length === 0) {
+        setSavingState('saved');
+        savedResetTimerRef.current = setTimeout(() => {
+          setSavingState('idle');
+        }, 2000);
+      }
+    } catch (err) {
+      activeWritesCountRef.current = Math.max(0, activeWritesCountRef.current - 1);
+      const reverted: CalendarRatings = { ...remoteRatingsRef.current };
+      for (const pending of Object.values(pendingPayloadsRef.current)) {
+        reverted[pending.day] = {
+          ...(reverted[pending.day] || {}),
+          [pending.testerId]: pending.userRating,
+        };
+      }
+      setRatings(reverted);
+      setSavingState('error');
+      setDbError(formatDatabaseError(err));
+    }
+  };
+
   // Initial auth loading screen
   if (!authReady) {
     return (
@@ -381,6 +437,7 @@ export default function App() {
             ratings={currentDayRatings}
             activeTesterId={activeTesterId}
             onUpdateRating={handleUpdateRating}
+            onClearRating={handleClearRating}
             onNavigateDay={(day) => setSelectedDay(day)}
             isAuthenticated={Boolean(authUser)}
             onSignIn={() => {}}

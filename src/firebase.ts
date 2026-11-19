@@ -13,6 +13,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   collection,
   query,
   where,
@@ -247,6 +248,29 @@ export async function saveRatingToFirestore(
     }
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, pathForWrite);
+  }
+}
+
+/**
+ * Delete a single tester's rating for a given day from Firestore.
+ */
+export async function deleteRatingFromFirestore(
+  day: number,
+  testerId: TesterId
+): Promise<void> {
+  const safeDay = Math.min(24, Math.max(1, Math.round(day)));
+  if (!isValidTesterId(testerId)) {
+    throw new Error(`Invalid tester ID: ${testerId}`);
+  }
+
+  const docId = `day_${safeDay}_${testerId}`;
+  const docRef = doc(db, 'ratings', docId);
+  const pathForDelete = `ratings/${docId}`;
+
+  try {
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, pathForDelete);
   }
 }
 
