@@ -8,6 +8,7 @@ import { CalendarOverview } from './components/CalendarOverview.tsx';
 import { DayView } from './components/DayView.tsx';
 import { LeaderboardView } from './components/LeaderboardView.tsx';
 import { LoginScreen } from './components/LoginScreen.tsx';
+import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 import {
   inferTesterIdFromEmail,
   isValidTesterId,
@@ -308,11 +309,14 @@ export default function App() {
   // Mandatory Login Gate before accessing the app
   if (!authUser) {
     return (
-      <LoginScreen
-        onSubmit={handleLoginSubmit}
-        isSigningIn={isSigningIn}
-        error={loginError}
-      />
+      <>
+        <LoginScreen
+          onSubmit={handleLoginSubmit}
+          isSigningIn={isSigningIn}
+          error={loginError}
+        />
+        <OfflineIndicator />
+      </>
     );
   }
 
@@ -397,6 +401,7 @@ export default function App() {
           />
         )}
       </main>
+      <OfflineIndicator />
     </div>
   );
 }

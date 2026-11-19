@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { TesterId } from '../types.ts';
 import { TESTERS } from '../data/initialBeers.ts';
+import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 interface HeaderProps {
   currentView: 'calendar' | 'day' | 'leaderboard';
@@ -90,8 +91,9 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </nav>
 
-          {/* Zone 3: Locked Profile Button (opens logout confirmation dialog) */}
-          <div className="flex items-center justify-end">
+          {/* Zone 3: Install PWA Button + Locked Profile Button (opens logout confirmation dialog) */}
+          <div className="flex items-center justify-end gap-2">
+            <PWAInstallButton compact />
             <button
               type="button"
               onClick={() => setIsLogoutDialogOpen(true)}

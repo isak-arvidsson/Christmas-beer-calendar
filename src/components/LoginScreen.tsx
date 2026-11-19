@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Lock, Eye, EyeOff, AlertCircle, LogIn } from 'lucide-react';
 import { TESTERS } from '../data/initialBeers.ts';
+import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 interface LoginScreenProps {
   onSubmit: (usernameOrEmail: string, password: string) => Promise<void>;
@@ -130,6 +131,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <span>{isSigningIn ? 'Loggar in...' : 'Logga in'}</span>
             </button>
           </form>
+        </div>
+
+        <div className="mt-5 flex justify-center">
+          <PWAInstallButton />
         </div>
       </div>
     </div>
