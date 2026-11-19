@@ -90,7 +90,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           Hantverksölen Som Regerar Julbordet
         </h1>
         <p className="mt-2 text-sm text-slate-300">
-          Realtidssummering av Isaks, Ingrids, Gustavs, Louises, Ludwigs och Emils provsmakningar.
+          Realtidssummering av Emils, Gustavs, Hannas, Ingrids, Isaks, Louises och Ludwigs provsmakningar.
         </p>
       </div>
 

@@ -25,7 +25,7 @@ import firebaseConfig from '../firebase-applet-config.json';
 import { CalendarRatings, TesterId, UserRating } from './types.ts';
 
 const CALENDAR_ID = 'julol-2026';
-const VALID_TESTER_IDS: TesterId[] = ['isak', 'ingrid', 'gustav', 'louise', 'ludwig', 'emil'];
+const VALID_TESTER_IDS: TesterId[] = ['emil', 'gustav', 'hanna', 'ingrid', 'isak', 'louise', 'ludwig'];
 export const AUTH_EMAIL_DOMAIN = 'julol.local';
 
 const app = initializeApp(firebaseConfig);

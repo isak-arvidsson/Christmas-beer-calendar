@@ -1,5 +1,5 @@
 import React from 'react';
-import { Minus, Plus, Sparkles, Snowflake, Flame, Trophy } from 'lucide-react';
+import { Sparkles, Snowflake, Flame, Trophy } from 'lucide-react';
 import { getScoreStyle } from '../utils/colors.ts';
 
 interface RatingSliderProps {
@@ -15,12 +15,6 @@ export const RatingSlider: React.FC<RatingSliderProps> = ({
   disabled = false,
 }) => {
   const currentStyle = getScoreStyle(value);
-
-  const handleStep = (delta: number) => {
-    if (disabled) return;
-    const next = Math.min(10.0, Math.max(0.0, Math.round((value + delta) * 10) / 10));
-    onChange(next);
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = parseFloat(e.target.value);
@@ -46,10 +40,6 @@ export const RatingSlider: React.FC<RatingSliderProps> = ({
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold" style={{ color: currentStyle.color }}>
             {currentStyle.label}
-          </span>
-          <span className="text-slate-500 text-xs">·</span>
-          <span className="text-xs text-slate-400 italic">
-            {currentStyle.adjective}
           </span>
         </div>
 
@@ -112,30 +102,6 @@ export const RatingSlider: React.FC<RatingSliderProps> = ({
             <Snowflake className="w-3.5 h-3.5 text-sky-500" />
           )}
         </div>
-      </div>
-
-      {/* Granular Step Controls (±0.1) */}
-      <div className="flex items-center justify-end gap-2 mt-2 pt-2 border-t border-slate-800/80">
-        <button
-          type="button"
-          onClick={() => handleStep(-0.1)}
-          disabled={disabled || value <= 0}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors border border-slate-800"
-          title="Minska med 0.1"
-        >
-          <Minus className="w-3 h-3" />
-          0.1
-        </button>
-        <button
-          type="button"
-          onClick={() => handleStep(0.1)}
-          disabled={disabled || value >= 10}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-40 transition-colors border border-slate-800"
-          title="Öka med 0.1"
-        >
-          <Plus className="w-3 h-3" />
-          0.1
-        </button>
       </div>
     </div>
   );

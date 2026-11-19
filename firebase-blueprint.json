@@ -17,7 +17,7 @@
         },
         "testerId": {
           "type": "string",
-          "enum": ["isak", "ingrid", "gustav", "louise", "ludwig", "emil"],
+          "enum": ["emil", "gustav", "hanna", "ingrid", "isak", "louise", "ludwig"],
           "description": "Profile ID of the taster"
         },
         "score": {
@@ -58,7 +58,7 @@
       "properties": {
         "selectedTesterId": {
           "type": "string",
-          "enum": ["isak", "ingrid", "gustav", "louise", "ludwig", "emil"],
+          "enum": ["emil", "gustav", "hanna", "ingrid", "isak", "louise", "ludwig"],
           "description": "Active taster profile selected by this user"
         },
         "updatedAt": {

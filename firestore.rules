@@ -22,7 +22,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Endast de 6 godkända användarkontona har åtkomst till databasen
+    // Endast de 7 godkända användarkontona har åtkomst till databasen
     function isAllowedMember() {
       return isSignedIn() && request.auth.uid in [
         '5JjzD1JSsUgm1n8eTtnddVNwV6o1',
@@ -30,7 +30,8 @@ service cloud.firestore {
         'AFNZzoVlW2QLYlMG6P7CSOvyC7B3',
         'E40cfEwuIfebmZRhlLA0LpCq9Gl2',
         'lhunVK0FapdpwQRRrSSDTLCV0Il1',
-        'J5DtURz7G4hjd9cfTI9rmgbHURB3'
+        'J5DtURz7G4hjd9cfTI9rmgbHURB3',
+        '99G5e4oqkUUEJ9Wiq7sa3Xy4aUA3'
       ];
     }
 
@@ -39,7 +40,7 @@ service cloud.firestore {
     }
 
     function isValidTesterId(testerId) {
-      return testerId is string && testerId in ['isak', 'ingrid', 'gustav', 'louise', 'ludwig', 'emil'];
+      return testerId is string && testerId in ['emil', 'gustav', 'hanna', 'ingrid', 'isak', 'louise', 'ludwig'];
     }
 
     function isValidRating(data) {

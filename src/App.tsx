@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { Cloud, LogIn, AlertCircle, Upload } from 'lucide-react';
+import { AlertCircle, Upload, Loader2 } from 'lucide-react';
 import { BeerDay, CalendarRatings, GoogleSheetConfig, TesterId, UserRating } from './types.ts';
 import { INITIAL_BEERS } from './data/initialBeers.ts';
 import { Header } from './components/Header.tsx';
@@ -8,7 +8,7 @@ import { CalendarOverview } from './components/CalendarOverview.tsx';
 import { DayView } from './components/DayView.tsx';
 import { LeaderboardView } from './components/LeaderboardView.tsx';
 import { GoogleSheetSyncModal } from './components/GoogleSheetSyncModal.tsx';
-import { LoginModal } from './components/LoginModal.tsx';
+import { LoginScreen } from './components/LoginScreen.tsx';
 import { parseBeersFromCsv } from './utils/googleSheets.ts';
 import {
   inferTesterIdFromEmail,
@@ -51,25 +51,22 @@ function formatDatabaseError(err: unknown): string {
   return 'Kunde inte synka med databasen. Kontrollera din anslutning eller logga in igen.';
 }
 
-export default function App() {
-  // Determine initial day based on current date (defaults to day in December, or Day 1)
-  const getInitialDay = () => {
-    const today = new Date();
-    if (today.getMonth() === 11) {
-      const day = today.getDate();
-      return Math.min(24, Math.max(1, day));
-    }
-    return 1;
-  };
+function getTodayHatchDay(): number {
+  const today = new Date();
+  if (today.getMonth() === 11) {
+    return Math.min(24, Math.max(1, today.getDate()));
+  }
+  return 1;
+}
 
-  const [selectedDay, setSelectedDay] = useState<number>(getInitialDay);
-  const [currentView, setCurrentView] = useState<'calendar' | 'day' | 'leaderboard'>('calendar');
+export default function App() {
+  const [selectedDay, setSelectedDay] = useState<number>(getTodayHatchDay);
+  const [currentView, setCurrentView] = useState<'calendar' | 'day' | 'leaderboard'>('day');
   const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
 
   // Firebase Auth & Shared Database state
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState<boolean>(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -77,7 +74,7 @@ export default function App() {
   const [hasLoadedRemoteRatings, setHasLoadedRemoteRatings] = useState<boolean>(false);
   const [isMigratingLocal, setIsMigratingLocal] = useState<boolean>(false);
 
-  // Active tester
+  // Active tester (locked to the signed-in account)
   const [activeTesterId, setActiveTesterId] = useState<TesterId>(() => {
     const saved = localStorage.getItem(ACTIVE_TESTER_STORAGE_KEY);
     if (saved && isValidTesterId(saved)) {
@@ -110,7 +107,7 @@ export default function App() {
   });
 
   // Ratings map (shared Firestore truth when signed in)
-  const [ratings, setRatings] = useState<CalendarRatings>(() => readLocalRatings());
+  const [ratings, setRatings] = useState<CalendarRatings>({});
 
   // Google Sheet Configuration
   const [sheetConfig, setSheetConfig] = useState<GoogleSheetConfig>(() => {
@@ -137,14 +134,21 @@ export default function App() {
   const activeWritesCountRef = useRef<number>(0);
   const savedResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Subscribe to Firebase Auth
+  // Subscribe to Firebase Auth and lock activeTesterId to the signed-in user
   useEffect(() => {
     const unsubscribe = subscribeToAuth((user) => {
       setAuthUser(user);
       setAuthReady(true);
-      if (!user) {
+      if (user) {
+        const inferred = inferTesterIdFromEmail(user.email);
+        if (inferred) {
+          setActiveTesterId(inferred);
+          localStorage.setItem(ACTIVE_TESTER_STORAGE_KEY, inferred);
+        }
+      } else {
         setHasLoadedRemoteRatings(false);
         setSavingState('idle');
+        setRatings({});
       }
     });
     return () => unsubscribe();
@@ -160,7 +164,7 @@ export default function App() {
     };
   }, []);
 
-  // Subscribe to Firestore ratings & load user's saved taster profile only when authenticated
+  // Subscribe to Firestore ratings & sync profile preference only when authenticated
   useEffect(() => {
     if (!authReady || !authUser) {
       return;
@@ -168,16 +172,19 @@ export default function App() {
 
     let isCancelled = false;
 
-    loadUserProfilePreference(authUser.uid)
-      .then((preferredTester) => {
-        if (!isCancelled && preferredTester) {
-          setActiveTesterId(preferredTester);
-          localStorage.setItem(ACTIVE_TESTER_STORAGE_KEY, preferredTester);
-        }
-      })
-      .catch((err) => {
-        console.warn('Could not load profile preference:', err);
-      });
+    const inferred = inferTesterIdFromEmail(authUser.email);
+    if (!inferred) {
+      loadUserProfilePreference(authUser.uid)
+        .then((preferredTester) => {
+          if (!isCancelled && preferredTester) {
+            setActiveTesterId(preferredTester);
+            localStorage.setItem(ACTIVE_TESTER_STORAGE_KEY, preferredTester);
+          }
+        })
+        .catch((err) => {
+          console.warn('Could not load profile preference:', err);
+        });
+    }
 
     const unsubscribeRatings = subscribeToRatings(
       (remoteRatings) => {
@@ -239,13 +246,6 @@ export default function App() {
     }
   };
 
-  // Open username/password login modal
-  const handleOpenLogin = () => {
-    setLoginError(null);
-    setDbError(null);
-    setIsLoginModalOpen(true);
-  };
-
   // Handle Username/Email + Password Sign-In
   const handleLoginSubmit = async (usernameOrEmail: string, password: string) => {
     setIsSigningIn(true);
@@ -263,7 +263,6 @@ export default function App() {
           console.warn('Could not sync inferred profile preference:', prefErr);
         }
       }
-      setIsLoginModalOpen(false);
     } catch (err: any) {
       const code = err?.code || '';
       if (
@@ -289,32 +288,23 @@ export default function App() {
     }
   };
 
-  // Handle Sign-Out
+  // Handle Sign-Out (returns user to mandatory LoginScreen so another profile can log in)
   const handleSignOut = async () => {
     setDbError(null);
+    setLoginError(null);
+    Object.values(pendingTimersRef.current).forEach((timer) => clearTimeout(timer));
+    pendingTimersRef.current = {};
+    pendingPayloadsRef.current = {};
     try {
       await signOutUser();
-      setRatings(readLocalRatings());
     } catch {
       setDbError('Kunde inte logga ut just nu.');
     }
   };
 
-  // Select active taster profile and persist to Firestore & localStorage
-  const handleSelectTester = (id: TesterId) => {
-    if (!isValidTesterId(id)) return;
-    setActiveTesterId(id);
-    localStorage.setItem(ACTIVE_TESTER_STORAGE_KEY, id);
-    if (authUser) {
-      saveUserProfilePreference(authUser.uid, id).catch((err) => {
-        console.warn('Could not save profile preference:', err);
-      });
-    }
-  };
-
-  // Update rating optimistically and persist debounced to Firestore
+  // Update rating optimistically for the locked active tester and persist debounced to Firestore
   const handleUpdateRating = (day: number, testerId: TesterId, userRating: UserRating) => {
-    if (!authUser) return;
+    if (!authUser || testerId !== activeTesterId) return;
 
     const writeKey = `${day}_${testerId}`;
     pendingPayloadsRef.current[writeKey] = { day, testerId, userRating };
@@ -357,7 +347,6 @@ export default function App() {
           latestPayload.userRating,
           uid
         );
-        // Clear pending marker only if no newer edit queued while writing
         if (pendingPayloadsRef.current[writeKey] === latestPayload) {
           delete pendingPayloadsRef.current[writeKey];
         }
@@ -458,12 +447,43 @@ export default function App() {
     [sheetConfig, authUser]
   );
 
-  // Auto-sync on mount if enabled
+  // Auto-sync on mount if enabled and authenticated
   useEffect(() => {
-    if (sheetConfig.autoSync && sheetConfig.sheetUrl) {
+    if (authUser && sheetConfig.autoSync && sheetConfig.sheetUrl) {
       syncWithGoogleSheet();
     }
-  }, []);
+  }, [authUser]);
+
+  // Initial auth loading screen
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-[#0c1412] text-slate-100 flex flex-col items-center justify-center gap-3 font-sans">
+        <span className="text-3xl">🎄</span>
+        <div className="flex items-center gap-2 text-sm text-amber-200">
+          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+          <span>Laddar Julölskalendern...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Mandatory Login Gate before accessing the app
+  if (!authUser) {
+    return (
+      <LoginScreen
+        onSubmit={handleLoginSubmit}
+        isSigningIn={isSigningIn}
+        error={loginError}
+      />
+    );
+  }
+
+  const handleNavigate = (view: 'calendar' | 'day' | 'leaderboard') => {
+    if (view === 'day') {
+      setSelectedDay(getTodayHatchDay());
+    }
+    setCurrentView(view);
+  };
 
   const currentBeer = beers.find((b) => b.day === selectedDay) || beers[0] || INITIAL_BEERS[0];
   const currentDayRatings = ratings[selectedDay] || {};
@@ -473,41 +493,14 @@ export default function App() {
       {/* Universal Top Navigation Header */}
       <Header
         currentView={currentView}
-        onNavigate={setCurrentView}
+        onNavigate={handleNavigate}
         activeTesterId={activeTesterId}
-        onSelectTester={handleSelectTester}
         onOpenSyncModal={() => setIsSyncModalOpen(true)}
         syncStatus={sheetConfig.syncStatus}
-        selectedDay={selectedDay}
-        authUser={authUser}
-        onSignIn={handleOpenLogin}
         onSignOut={handleSignOut}
-        isSigningIn={isSigningIn}
       />
 
-      {/* Shared Database Auth / Error / Migration Notices */}
-      {authReady && !authUser && (
-        <div className="border-b border-amber-500/20 bg-amber-500/10 px-4 py-2.5">
-          <div className="mx-auto flex max-w-7xl flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-            <div className="flex items-center gap-2 text-amber-200">
-              <Cloud className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>
-                Logga in med ditt användarnamn och lösenord för att hämta och spara betyg i den gemensamma databasen.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleOpenLogin}
-              disabled={isSigningIn}
-              className="inline-flex items-center justify-center gap-1.5 self-start sm:self-auto rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors disabled:opacity-60 shrink-0"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>{isSigningIn ? 'Loggar in...' : 'Logga in'}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
+      {/* Shared Database Error / Migration Notices */}
       {dbError && (
         <div className="border-b border-red-500/30 bg-red-950/50 px-4 py-2.5">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 text-xs text-red-200">
@@ -526,7 +519,7 @@ export default function App() {
         </div>
       )}
 
-      {authUser && unmigratedLocalEntries.length > 0 && (
+      {unmigratedLocalEntries.length > 0 && (
         <div className="border-b border-emerald-500/20 bg-emerald-950/30 px-4 py-2.5">
           <div className="mx-auto flex max-w-7xl flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
             <div className="flex items-center gap-2 text-emerald-200">
@@ -570,7 +563,7 @@ export default function App() {
             onUpdateRating={handleUpdateRating}
             onNavigateDay={(day) => setSelectedDay(day)}
             isAuthenticated={Boolean(authUser)}
-            onSignIn={handleOpenLogin}
+            onSignIn={() => {}}
             isSigningIn={isSigningIn}
             savingState={savingState}
           />
@@ -588,16 +581,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Username & Password Login Modal */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        onSubmit={handleLoginSubmit}
-        isSigningIn={isSigningIn}
-        error={loginError}
-        defaultUsername={activeTesterId}
-      />
-
       {/* Google Sheets Sync Drawer / Modal */}
       <GoogleSheetSyncModal
         isOpen={isSyncModalOpen}
@@ -608,28 +591,6 @@ export default function App() {
         beers={beers}
         ratings={ratings}
       />
-
-      {/* Subtle Hygge Footer */}
-      <footer className="border-t border-amber-950/30 bg-[#080d0c] py-6 px-4 text-center text-xs text-slate-500">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="font-cinzel font-bold text-amber-400">Julölskalendern 2026</span>
-            <span>·</span>
-            <span>Isak, Ingrid, Gustav, Louise, Ludwig & Emil</span>
-          </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <span>24 Svenska Julöl</span>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => setIsSyncModalOpen(true)}
-              className="text-amber-400 hover:underline"
-            >
-              Google Sheets Sync
-            </button>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

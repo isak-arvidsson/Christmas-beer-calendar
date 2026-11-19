@@ -33,30 +33,6 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      {/* Welcome Header & Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-cinzel tracking-tight">
-            Julölskalendern 2026
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            24 dagars svensk hantverksjulöl · Betygsätt från 0.0 till 10.0
-          </p>
-        </div>
-
-        {/* Search Bar */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Sök öl eller bryggeri..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
-          />
-        </div>
-      </div>
-
       {/* 24 Advent Calendar Cards Grid */}
       {filteredBeers.length === 0 ? (
         <div className="rounded-2xl border border-slate-800 bg-[#14201c] p-12 text-center text-slate-400">

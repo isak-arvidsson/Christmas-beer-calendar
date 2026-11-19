@@ -1,117 +1,113 @@
-import React, { useState } from 'react';
-import { User } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Award,
   Beer,
   RefreshCw,
-  ChevronDown,
-  Check,
-  LogIn,
   LogOut,
-  Cloud,
+  X,
 } from 'lucide-react';
 import { TesterId } from '../types.ts';
 import { TESTERS } from '../data/initialBeers.ts';
-import { formatDisplayUsername } from '../firebase.ts';
 
 interface HeaderProps {
   currentView: 'calendar' | 'day' | 'leaderboard';
   onNavigate: (view: 'calendar' | 'day' | 'leaderboard') => void;
   activeTesterId: TesterId;
-  onSelectTester: (id: TesterId) => void;
   onOpenSyncModal: () => void;
   syncStatus: 'idle' | 'syncing' | 'success' | 'error';
-  selectedDay: number;
-  authUser: User | null;
-  onSignIn: () => void;
   onSignOut: () => void;
-  isSigningIn: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentView,
   onNavigate,
   activeTesterId,
-  onSelectTester,
   onOpenSyncModal,
   syncStatus,
-  selectedDay,
-  authUser,
-  onSignIn,
   onSignOut,
-  isSigningIn,
 }) => {
-  const [isTesterMenuOpen, setIsTesterMenuOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const activeTester = TESTERS.find((t) => t.id === activeTesterId) || TESTERS[0];
 
+  useEffect(() => {
+    if (!isLogoutDialogOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsLogoutDialogOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLogoutDialogOpen]);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-amber-950/30 bg-[#0c1412]/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 md:gap-8 px-4 py-3 sm:px-6">
-        {/* Zone 1: Single text element wordmark */}
-        <button
-          type="button"
-          onClick={() => onNavigate('calendar')}
-          className="group flex items-center gap-2.5 text-left text-lg md:text-xl font-bold tracking-tight text-amber-100 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0 font-cinzel"
-        >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 group-hover:bg-amber-500/30">
-            🎄
-          </span>
-          <span>Julölskalendern</span>
-        </button>
-
-        {/* Zone 2: 4 single-line text navigation links */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
-          <button
-            type="button"
-            onClick={() => onNavigate('calendar')}
-            className={`flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 hover:text-amber-400 ${
-              currentView === 'calendar' ? 'text-amber-400 font-semibold border-b-2 border-amber-400 pb-0.5' : 'text-slate-300'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Kalender</span>
-          </button>
-
+    <>
+      <header className="sticky top-0 z-40 border-b border-amber-950/30 bg-[#0c1412]/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 md:gap-8 px-4 py-3 sm:px-6">
+          {/* Zone 1: Single text element wordmark */}
           <button
             type="button"
             onClick={() => onNavigate('day')}
-            className={`flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 hover:text-amber-400 ${
-              currentView === 'day' ? 'text-amber-400 font-semibold border-b-2 border-amber-400 pb-0.5' : 'text-slate-300'
-            }`}
+            className="group flex items-center gap-2.5 text-left text-base sm:text-lg md:text-xl font-bold tracking-tight text-amber-100 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0 font-cinzel"
           >
-            <Beer className="w-4 h-4" />
-            <span>Dag {selectedDay}</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 group-hover:bg-amber-500/30">
+              🎄
+            </span>
+            <span>Julölskalendern</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => onNavigate('leaderboard')}
-            className={`flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 hover:text-amber-400 ${
-              currentView === 'leaderboard' ? 'text-amber-400 font-semibold border-b-2 border-amber-400 pb-0.5' : 'text-slate-300'
-            }`}
-          >
-            <Award className="w-4 h-4" />
-            <span>Topplista</span>
-          </button>
+          {/* Zone 2: 4 single-line text navigation links */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+            <button
+              type="button"
+              onClick={() => onNavigate('day')}
+              className={`flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 hover:text-amber-400 ${
+                currentView === 'day' ? 'text-amber-400 font-semibold border-b-2 border-amber-400 pb-0.5' : 'text-slate-300'
+              }`}
+            >
+              <Beer className="w-4 h-4" />
+              <span>Dagens lucka</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={onOpenSyncModal}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin text-amber-400' : ''}`} />
-            <span>Google Sheet</span>
-          </button>
-        </nav>
+            <button
+              type="button"
+              onClick={() => onNavigate('calendar')}
+              className={`flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 hover:text-amber-400 ${
+                currentView === 'calendar' ? 'text-amber-400 font-semibold border-b-2 border-amber-400 pb-0.5' : 'text-slate-300'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>Kalender</span>
+            </button>
 
-        {/* Zone 3: Active Tester Persona Switcher & Account Menu */}
-        <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => onNavigate('leaderboard')}
+              className={`flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 hover:text-amber-400 ${
+                currentView === 'leaderboard' ? 'text-amber-400 font-semibold border-b-2 border-amber-400 pb-0.5' : 'text-slate-300'
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              <span>Topplista</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenSyncModal}
+              className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin text-amber-400' : ''}`} />
+              <span>Google Sheet</span>
+            </button>
+          </nav>
+
+          {/* Zone 3: Locked Profile Button (opens logout confirmation dialog) */}
           <button
             type="button"
-            onClick={() => setIsTesterMenuOpen(!isTesterMenuOpen)}
-            className="flex items-center gap-2 rounded-xl bg-slate-900/90 px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-200 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-800 transition-all shadow-sm whitespace-nowrap shrink-0"
-            aria-expanded={isTesterMenuOpen}
+            onClick={() => setIsLogoutDialogOpen(true)}
+            title={`Inloggad som ${activeTester.name}. Klicka för att logga ut.`}
+            className="flex items-center gap-2 rounded-xl bg-slate-900/90 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-200 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-800 transition-all shadow-sm whitespace-nowrap shrink-0"
           >
             <span
               className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-slate-950"
@@ -119,144 +115,120 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {activeTester.shortName}
             </span>
-            <span className="hidden sm:inline text-slate-400">Provar:</span>
+            <span className="hidden lg:inline text-slate-400">Provar:</span>
             <span className="font-semibold text-white">{activeTester.name}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
           </button>
-
-          {/* Persona Switcher & Auth Dropdown */}
-          {isTesterMenuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setIsTesterMenuOpen(false)}
-              />
-              <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-[#14201c] p-2 text-slate-200 shadow-2xl border border-amber-950/50 z-50">
-                <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-amber-400/80 border-b border-slate-800/80">
-                  Vem sätter betyg nu?
-                </div>
-                <div className="mt-1 space-y-1 max-h-80 overflow-y-auto">
-                  {TESTERS.map((tester) => {
-                    const isSelected = tester.id === activeTesterId;
-                    return (
-                      <button
-                        key={tester.id}
-                        type="button"
-                        onClick={() => {
-                          onSelectTester(tester.id);
-                          setIsTesterMenuOpen(false);
-                        }}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                          isSelected
-                            ? 'bg-amber-500/15 text-white font-semibold'
-                            : 'hover:bg-slate-800/60 text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-slate-950 shadow-sm shrink-0"
-                            style={{ backgroundColor: tester.avatarColor }}
-                          >
-                            {tester.shortName}
-                          </span>
-                          <div>
-                            <div className="font-medium">{tester.name}</div>
-                            <div className="text-[10px] text-slate-400">{tester.favoriteStyle}</div>
-                          </div>
-                        </div>
-                        {isSelected && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Shared Database Auth Section */}
-                <div className="mt-2 pt-2 border-t border-slate-800/80 px-2 pb-1">
-                  {authUser ? (
-                    <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-950/60 px-3 py-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400">
-                          <Cloud className="w-3.5 h-3.5 shrink-0" />
-                          <span>Synkad databas</span>
-                        </div>
-                        <div className="text-[11px] text-slate-400 truncate">
-                          {formatDisplayUsername(authUser.email, authUser.displayName)}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsTesterMenuOpen(false);
-                          onSignOut();
-                        }}
-                        className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors shrink-0"
-                      >
-                        <LogOut className="w-3.5 h-3.5" />
-                        <span>Logga ut</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={isSigningIn}
-                      onClick={() => {
-                        setIsTesterMenuOpen(false);
-                        onSignIn();
-                      }}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 transition-colors disabled:opacity-60"
-                    >
-                      <LogIn className="w-3.5 h-3.5" />
-                      <span>{isSigningIn ? 'Loggar in...' : 'Logga in'}</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
         </div>
-      </div>
 
-      {/* Mobile Sub-Navigation Bar */}
-      <div className="flex md:hidden items-center justify-around border-t border-slate-900 bg-[#0c1412]/95 px-2 py-2 text-xs">
-        <button
-          type="button"
-          onClick={() => onNavigate('calendar')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
-            currentView === 'calendar' ? 'text-amber-400 font-semibold' : 'text-slate-400'
-          }`}
+        {/* Mobile Sub-Navigation Bar */}
+        <div className="flex md:hidden items-center justify-around border-t border-slate-900 bg-[#0c1412]/95 px-2 py-2 text-xs">
+          <button
+            type="button"
+            onClick={() => onNavigate('day')}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
+              currentView === 'day' ? 'text-amber-400 font-semibold' : 'text-slate-400'
+            }`}
+          >
+            <Beer className="w-4 h-4" />
+            <span>Dagens lucka</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('calendar')}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
+              currentView === 'calendar' ? 'text-amber-400 font-semibold' : 'text-slate-400'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Kalender</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('leaderboard')}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
+              currentView === 'leaderboard' ? 'text-amber-400 font-semibold' : 'text-slate-400'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            <span>Topplista</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenSyncModal}
+            className="flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-slate-400"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncStatus === 'syncing' ? 'animate-spin text-amber-400' : ''}`} />
+            <span>Sync</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Logout Confirmation Dialog */}
+      {isLogoutDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+          onClick={() => setIsLogoutDialogOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="logout-dialog-title"
         >
-          <Calendar className="w-4 h-4" />
-          <span>Kalender</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('day')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
-            currentView === 'day' ? 'text-amber-400 font-semibold' : 'text-slate-400'
-          }`}
-        >
-          <Beer className="w-4 h-4" />
-          <span>Dag {selectedDay}</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('leaderboard')}
-          className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
-            currentView === 'leaderboard' ? 'text-amber-400 font-semibold' : 'text-slate-400'
-          }`}
-        >
-          <Award className="w-4 h-4" />
-          <span>Topplista</span>
-        </button>
-        <button
-          type="button"
-          onClick={onOpenSyncModal}
-          className="flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-slate-400"
-        >
-          <RefreshCw className={`w-4 h-4 ${syncStatus === 'syncing' ? 'animate-spin text-amber-400' : ''}`} />
-          <span>Sync</span>
-        </button>
-      </div>
-    </header>
+          <div
+            className="relative w-full max-w-sm rounded-3xl bg-[#14201c] p-6 border border-amber-950/60 shadow-2xl text-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsLogoutDialogOpen(false)}
+              className="absolute top-4 right-4 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Stäng"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+              <span
+                className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-slate-950 shrink-0 shadow-sm"
+                style={{ backgroundColor: activeTester.avatarColor }}
+              >
+                {activeTester.shortName}
+              </span>
+              <div>
+                <h2 id="logout-dialog-title" className="text-lg font-bold text-white font-cinzel">
+                  Vill du logga ut?
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Inloggad som {activeTester.name}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+              För att sätta betyg med en annan profil behöver du logga ut och logga in på nytt.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsLogoutDialogOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-300 border border-slate-700/80 hover:bg-slate-800 hover:text-white transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogoutDialogOpen(false);
+                  onSignOut();
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-500 transition-colors shadow-md"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Logga ut</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

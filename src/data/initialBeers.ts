@@ -2,12 +2,28 @@ import { BeerDay, Tester } from '../types.ts';
 
 export const TESTERS: Tester[] = [
   {
-    id: 'isak',
-    name: 'Isak',
-    shortName: 'IS',
-    avatarColor: '#38bdf8', // Nordic sky blue
-    accentBg: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
-    favoriteStyle: 'Winter Ale & Porter',
+    id: 'emil',
+    name: 'Emil',
+    shortName: 'EM',
+    avatarColor: '#fb7185', // Lingonberry coral
+    accentBg: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    favoriteStyle: 'Klassisk Julöl & Bock',
+  },
+  {
+    id: 'gustav',
+    name: 'Gustav',
+    shortName: 'GU',
+    avatarColor: '#10b981', // Pine green
+    accentBg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    favoriteStyle: 'Mörk Lager & Klosteröl',
+  },
+  {
+    id: 'hanna',
+    name: 'Hanna',
+    shortName: 'HA',
+    avatarColor: '#22d3ee', // Frosty cyan
+    accentBg: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    favoriteStyle: 'Kryddig Julöl & Amber Ale',
   },
   {
     id: 'ingrid',
@@ -18,12 +34,12 @@ export const TESTERS: Tester[] = [
     favoriteStyle: 'Spiced Ale & Vörtöl',
   },
   {
-    id: 'gustav',
-    name: 'Gustav',
-    shortName: 'GU',
-    avatarColor: '#10b981', // Pine green
-    accentBg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    favoriteStyle: 'Mörk Lager & Klosteröl',
+    id: 'isak',
+    name: 'Isak',
+    shortName: 'IS',
+    avatarColor: '#38bdf8', // Nordic sky blue
+    accentBg: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+    favoriteStyle: 'Winter Ale & Porter',
   },
   {
     id: 'louise',
@@ -40,14 +56,6 @@ export const TESTERS: Tester[] = [
     avatarColor: '#a855f7', // Winter violet
     accentBg: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
     favoriteStyle: 'Jul-IPA & Mörk Ale',
-  },
-  {
-    id: 'emil',
-    name: 'Emil',
-    shortName: 'EM',
-    avatarColor: '#fb7185', // Lingonberry coral
-    accentBg: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
-    favoriteStyle: 'Klassisk Julöl & Bock',
   },
 ];
 

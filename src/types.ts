@@ -1,4 +1,4 @@
-export type TesterId = 'isak' | 'ingrid' | 'gustav' | 'louise' | 'ludwig' | 'emil';
+export type TesterId = 'emil' | 'gustav' | 'hanna' | 'ingrid' | 'isak' | 'louise' | 'ludwig';
 
 export interface Tester {
   id: TesterId;

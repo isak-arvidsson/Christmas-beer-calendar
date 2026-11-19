@@ -82,12 +82,13 @@ export function parseBeersFromCsv(
   const imgIdx = header.findIndex((h) => h.includes('bild') || h.includes('image') || h.includes('img'));
 
   // Testers columns
-  const isakIdx = header.findIndex((h) => h.includes('isak'));
-  const ingridIdx = header.findIndex((h) => h.includes('ingrid'));
+  const emilIdx = header.findIndex((h) => h.includes('emil'));
   const gustavIdx = header.findIndex((h) => h.includes('gustav'));
+  const hannaIdx = header.findIndex((h) => h.includes('hanna'));
+  const ingridIdx = header.findIndex((h) => h.includes('ingrid'));
+  const isakIdx = header.findIndex((h) => h.includes('isak'));
   const louiseIdx = header.findIndex((h) => h.includes('louise'));
   const ludwigIdx = header.findIndex((h) => h.includes('ludwig'));
-  const emilIdx = header.findIndex((h) => h.includes('emil'));
 
   const parsedBeers: BeerDay[] = [];
   const ratingsPatch: CalendarRatings = {};
@@ -125,12 +126,13 @@ export function parseBeersFromCsv(
 
     // Check if ratings are present in sheet
     const testerIndices: [TesterId, number][] = [
-      ['isak', isakIdx],
-      ['ingrid', ingridIdx],
+      ['emil', emilIdx],
       ['gustav', gustavIdx],
+      ['hanna', hannaIdx],
+      ['ingrid', ingridIdx],
+      ['isak', isakIdx],
       ['louise', louiseIdx],
       ['ludwig', ludwigIdx],
-      ['emil', emilIdx],
     ];
 
     for (const [testerId, colIdx] of testerIndices) {
@@ -168,12 +170,13 @@ export function exportCalendarToCsv(beers: BeerDay[], ratings: CalendarRatings):
     'Systembolaget URL',
     'Bild URL',
     'Beskrivning',
-    'Isak',
-    'Ingrid',
+    'Emil',
     'Gustav',
+    'Hanna',
+    'Ingrid',
+    'Isak',
     'Louise',
     'Ludwig',
-    'Emil',
     'Medelbetyg',
   ];
 
@@ -188,20 +191,22 @@ export function exportCalendarToCsv(beers: BeerDay[], ratings: CalendarRatings):
 
   const rows = beers.map((beer) => {
     const dayRating = ratings[beer.day] || {};
-    const isakScore = dayRating.isak?.score ?? '';
-    const ingridScore = dayRating.ingrid?.score ?? '';
+    const emilScore = dayRating.emil?.score ?? '';
     const gustavScore = dayRating.gustav?.score ?? '';
+    const hannaScore = dayRating.hanna?.score ?? '';
+    const ingridScore = dayRating.ingrid?.score ?? '';
+    const isakScore = dayRating.isak?.score ?? '';
     const louiseScore = dayRating.louise?.score ?? '';
     const ludwigScore = dayRating.ludwig?.score ?? '';
-    const emilScore = dayRating.emil?.score ?? '';
 
     const validScores = [
-      isakScore,
-      ingridScore,
+      emilScore,
       gustavScore,
+      hannaScore,
+      ingridScore,
+      isakScore,
       louiseScore,
       ludwigScore,
-      emilScore,
     ].filter((s): s is number => typeof s === 'number');
     const avg = validScores.length > 0 ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1) : '';
 
@@ -214,12 +219,13 @@ export function exportCalendarToCsv(beers: BeerDay[], ratings: CalendarRatings):
       escapeCell(beer.systembolagetUrl),
       escapeCell(beer.imageUrl || ''),
       escapeCell(beer.description),
-      escapeCell(isakScore),
-      escapeCell(ingridScore),
+      escapeCell(emilScore),
       escapeCell(gustavScore),
+      escapeCell(hannaScore),
+      escapeCell(ingridScore),
+      escapeCell(isakScore),
       escapeCell(louiseScore),
       escapeCell(ludwigScore),
-      escapeCell(emilScore),
       escapeCell(avg),
     ].join(',');
   });

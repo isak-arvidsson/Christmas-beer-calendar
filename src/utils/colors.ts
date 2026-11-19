@@ -7,7 +7,6 @@ export interface ScoreStyle {
   textClass: string;
   glow: string;
   label: string;
-  adjective: string;
   iconName: 'snowflake' | 'sparkle' | 'flame' | 'trophy' | 'beer';
 }
 
@@ -26,8 +25,7 @@ export function getScoreStyle(score: number): ScoreStyle {
       borderColor: 'rgba(56, 189, 248, 0.35)',
       textClass: 'text-sky-400',
       glow: '0 0 16px rgba(56, 189, 248, 0.45)',
-      label: 'Djupfryst / Iskall',
-      adjective: 'Knappt drickbar',
+      label: 'Knappt drickbar',
       iconName: 'snowflake',
     };
   } else if (rounded < 4.0) {
@@ -37,8 +35,7 @@ export function getScoreStyle(score: number): ScoreStyle {
       borderColor: 'rgba(14, 165, 233, 0.35)',
       textClass: 'text-sky-300',
       glow: '0 0 16px rgba(14, 165, 233, 0.45)',
-      label: 'Kall & Dämpad',
-      adjective: 'Lite blek julstämning',
+      label: 'Lite blek julstämning',
       iconName: 'snowflake',
     };
   } else if (rounded < 5.5) {
@@ -48,8 +45,7 @@ export function getScoreStyle(score: number): ScoreStyle {
       borderColor: 'rgba(16, 185, 129, 0.35)',
       textClass: 'text-emerald-400',
       glow: '0 0 16px rgba(16, 185, 129, 0.45)',
-      label: 'Granbarr & Hederlig',
-      adjective: 'Godkänd vardagsjulöl',
+      label: 'Godkänd vardagsjulöl',
       iconName: 'beer',
     };
   } else if (rounded < 7.0) {
@@ -59,8 +55,7 @@ export function getScoreStyle(score: number): ScoreStyle {
       borderColor: 'rgba(245, 158, 11, 0.4)',
       textClass: 'text-amber-400',
       glow: '0 0 18px rgba(245, 158, 11, 0.5)',
-      label: 'Varm Kryddamber',
-      adjective: 'Riktigt god & mysig',
+      label: 'Riktigt god & mysig',
       iconName: 'sparkle',
     };
   } else if (rounded < 8.5) {
@@ -70,8 +65,7 @@ export function getScoreStyle(score: number): ScoreStyle {
       borderColor: 'rgba(249, 115, 22, 0.45)',
       textClass: 'text-orange-400',
       glow: '0 0 20px rgba(249, 115, 22, 0.55)',
-      label: 'Lingon & Pepparkaka',
-      adjective: 'Underbar julbordskandidat',
+      label: 'Underbar julbordskandidat',
       iconName: 'flame',
     };
   } else if (rounded < 9.5) {
@@ -81,8 +75,7 @@ export function getScoreStyle(score: number): ScoreStyle {
       borderColor: 'rgba(220, 38, 38, 0.55)',
       textClass: 'text-red-400',
       glow: '0 0 24px rgba(220, 38, 38, 0.65)',
-      label: 'Strålande Julafton',
-      adjective: 'Högsta hantverksklass!',
+      label: 'Högsta hantverksklass!',
       iconName: 'flame',
     };
   } else {
@@ -92,8 +85,7 @@ export function getScoreStyle(score: number): ScoreStyle {
       borderColor: 'rgba(234, 179, 8, 0.65)',
       textClass: 'text-red-300 font-bold',
       glow: '0 0 32px rgba(220, 38, 38, 0.8), 0 0 12px rgba(245, 158, 11, 0.8)',
-      label: 'Julens Mästare 10.0!',
-      adjective: 'Oslagbar julmagi i glaset!',
+      label: 'Oslagbar julmagi i glaset!',
       iconName: 'trophy',
     };
   }
@@ -112,7 +104,7 @@ export function getSliderTrackBackground(score: number): string {
  * Computes average, completion count, and standard deviation
  */
 export function computeDayRatingStats(ratings: DayRatings) {
-  const testers: TesterId[] = ['isak', 'ingrid', 'gustav', 'louise', 'ludwig', 'emil'];
+  const testers: TesterId[] = ['emil', 'gustav', 'hanna', 'ingrid', 'isak', 'louise', 'ludwig'];
   const totalTesters = testers.length;
   const activeEntries = testers
     .map((id) => ratings[id])

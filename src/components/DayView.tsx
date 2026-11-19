@@ -3,13 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  CheckCircle2,
-  Clock,
-  Sparkles,
-  Eye,
-  EyeOff,
-  Share2,
-  CalendarDays,
   Thermometer,
   MapPin,
 } from 'lucide-react';
@@ -53,7 +46,6 @@ export const DayView: React.FC<DayViewProps> = ({
   const [sliderScore, setSliderScore] = useState<number>(userCurrentRating?.score ?? 7.0);
   const [tastingNotes, setTastingNotes] = useState<string>(userCurrentRating?.notes ?? '');
   const [selectedTags, setSelectedTags] = useState<string[]>(userCurrentRating?.flavorTags ?? []);
-  const [blindMode, setBlindMode] = useState<boolean>(false);
   const [hasSavedFeedback, setHasSavedFeedback] = useState<boolean>(false);
   const isEditingNotesRef = React.useRef<boolean>(false);
 
@@ -311,17 +303,6 @@ export const DayView: React.FC<DayViewProps> = ({
                   </span>
                 )}
               </h2>
-
-              {/* Blind Mode Toggle */}
-              <button
-                type="button"
-                onClick={() => setBlindMode(!blindMode)}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
-                title="Dölj andras betyg tills du smakat klart för att undvika partiskhet"
-              >
-                {blindMode ? <EyeOff className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5" />}
-                <span>{blindMode ? 'Blindprovning aktiv' : 'Blindprovning'}</span>
-              </button>
             </div>
 
             {!isAuthenticated && (
@@ -422,89 +403,77 @@ export const DayView: React.FC<DayViewProps> = ({
               )}
             </div>
 
-            {blindMode && !userCurrentRating ? (
-              <div className="p-6 text-center rounded-xl bg-slate-950/60 border border-slate-800">
-                <EyeOff className="w-8 h-8 text-amber-400 mx-auto mb-2 opacity-80" />
-                <div className="text-sm font-semibold text-slate-200">
-                  Blindprovningsläge påslaget
-                </div>
-                <div className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  Sätt ditt eget betyg ovan för att avslöja vad övriga i gruppen tyckte!
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {TESTERS.map((tester) => {
-                  const rating = ratings[tester.id];
-                  const hasRated = rating !== undefined && typeof rating.score === 'number';
-                  const testerScoreStyle = hasRated ? getScoreStyle(rating.score) : null;
+            <div className="space-y-3">
+              {TESTERS.map((tester) => {
+                const rating = ratings[tester.id];
+                const hasRated = rating !== undefined && typeof rating.score === 'number';
+                const testerScoreStyle = hasRated ? getScoreStyle(rating.score) : null;
 
-                  return (
-                    <div
-                      key={tester.id}
-                      className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/80"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-slate-950"
-                          style={{ backgroundColor: tester.avatarColor }}
-                        >
-                          {tester.shortName}
-                        </span>
-                        <div>
-                          <div className="font-semibold text-sm text-slate-200 flex items-center gap-2">
-                            <span>{tester.name}</span>
-                            {tester.id === activeTesterId && (
-                              <span className="text-[10px] text-amber-400 uppercase tracking-wider font-normal">
-                                (du)
+                return (
+                  <div
+                    key={tester.id}
+                    className="flex items-center justify-between p-3.5 rounded-xl bg-slate-950/50 border border-slate-800/80"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-slate-950"
+                        style={{ backgroundColor: tester.avatarColor }}
+                      >
+                        {tester.shortName}
+                      </span>
+                      <div>
+                        <div className="font-semibold text-sm text-slate-200 flex items-center gap-2">
+                          <span>{tester.name}</span>
+                          {tester.id === activeTesterId && (
+                            <span className="text-[10px] text-amber-400 uppercase tracking-wider font-normal">
+                              (du)
+                            </span>
+                          )}
+                        </div>
+                        {rating?.notes && (
+                          <div className="text-xs text-slate-400 italic mt-0.5 line-clamp-1">
+                            "{rating.notes}"
+                          </div>
+                        )}
+                        {rating?.flavorTags && rating.flavorTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {rating.flavorTags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[10px] text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                            {rating.flavorTags.length > 3 && (
+                              <span className="text-[10px] text-slate-500">
+                                +{rating.flavorTags.length - 3}
                               </span>
                             )}
                           </div>
-                          {rating?.notes && (
-                            <div className="text-xs text-slate-400 italic mt-0.5 line-clamp-1">
-                              "{rating.notes}"
-                            </div>
-                          )}
-                          {rating?.flavorTags && rating.flavorTags.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {rating.flavorTags.slice(0, 3).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="text-[10px] text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                              {rating.flavorTags.length > 3 && (
-                                <span className="text-[10px] text-slate-500">
-                                  +{rating.flavorTags.length - 3}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        {hasRated ? (
-                          <div className="flex items-baseline gap-1">
-                            <span
-                              className="text-xl font-bold font-mono tabular-nums"
-                              style={{ color: testerScoreStyle?.color }}
-                            >
-                              {rating.score.toFixed(1)}
-                            </span>
-                            <span className="text-xs text-slate-500 font-mono">/10</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-500 italic">Ej provat än</span>
                         )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+
+                    <div className="text-right">
+                      {hasRated ? (
+                        <div className="flex items-baseline gap-1">
+                          <span
+                            className="text-xl font-bold font-mono tabular-nums"
+                            style={{ color: testerScoreStyle?.color }}
+                          >
+                            {rating.score.toFixed(1)}
+                          </span>
+                          <span className="text-xs text-slate-500 font-mono">/10</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">Ej provat än</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
