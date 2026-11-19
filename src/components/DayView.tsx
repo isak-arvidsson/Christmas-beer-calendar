@@ -41,6 +41,7 @@ export const DayView: React.FC<DayViewProps> = ({
 }) => {
   const activeTester = TESTERS.find((t) => t.id === activeTesterId) || TESTERS[0];
   const userCurrentRating = ratings[activeTesterId];
+  const userHasRated = userCurrentRating !== undefined && typeof userCurrentRating.score === 'number';
 
   // Local state for immediate slider responsiveness
   const [sliderScore, setSliderScore] = useState<number>(userCurrentRating?.score ?? 7.0);
@@ -107,15 +108,16 @@ export const DayView: React.FC<DayViewProps> = ({
       <div className="flex items-center justify-between gap-4 mb-6">
         <button
           type="button"
-          onClick={() => onNavigateDay(day > 1 ? day - 1 : totalDays)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-[#14201c] text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-amber-950/40"
+          onClick={() => day > 1 && onNavigateDay(day - 1)}
+          disabled={day <= 1}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-[#14201c] text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-amber-950/40 disabled:opacity-35 disabled:cursor-not-allowed"
         >
           <ChevronLeft className="w-4 h-4" />
           <span className="hidden sm:inline">Föregående dag</span>
-          <span className="sm:hidden">Dag {day > 1 ? day - 1 : totalDays}</span>
+          <span className="sm:hidden">Dag {Math.max(1, day - 1)}</span>
         </button>
 
-        {/* Day Indicator & Quick Jump Carousel */}
+        {/* Day Indicator */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 text-center">
             <span className="text-xs uppercase tracking-wider text-amber-400 font-semibold">
@@ -124,17 +126,18 @@ export const DayView: React.FC<DayViewProps> = ({
             <span className="text-xl sm:text-2xl font-extrabold text-white font-cinzel">
               {day}
             </span>
-            <span className="text-xs text-slate-500 font-mono">/ 24</span>
+            <span className="text-xs text-slate-500 font-mono">/ {totalDays}</span>
           </div>
         </div>
 
         <button
           type="button"
-          onClick={() => onNavigateDay(day < totalDays ? day + 1 : 1)}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-[#14201c] text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-amber-950/40"
+          onClick={() => day < totalDays && onNavigateDay(day + 1)}
+          disabled={day >= totalDays}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-[#14201c] text-slate-300 hover:text-white hover:bg-slate-800 transition-colors border border-amber-950/40 disabled:opacity-35 disabled:cursor-not-allowed"
         >
           <span className="hidden sm:inline">Nästa dag</span>
-          <span className="sm:hidden">Dag {day < totalDays ? day + 1 : 1}</span>
+          <span className="sm:hidden">Dag {Math.min(totalDays, day + 1)}</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -190,7 +193,13 @@ export const DayView: React.FC<DayViewProps> = ({
                       return (
                         <span
                           key={tester.id}
-                          title={`${tester.name}: ${hasRated ? `${ratings[tester.id]?.score?.toFixed(1)}/10` : 'Ej betygsatt'}`}
+                          title={`${tester.name}: ${
+                            hasRated
+                              ? userHasRated
+                                ? `${ratings[tester.id]?.score?.toFixed(1)}/10`
+                                : 'Har provat (betyg dolt)'
+                              : 'Ej betygsatt'
+                          }`}
                           className={`flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold transition-all ${
                             hasRated
                               ? 'text-slate-950 ring-1 ring-white/60'
@@ -206,7 +215,7 @@ export const DayView: React.FC<DayViewProps> = ({
                 </div>
               </div>
 
-              {stats.average !== null && (
+              {userHasRated && stats.average !== null && (
                 <div className="text-right">
                   <div className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Snitt</div>
                   <div
@@ -223,7 +232,7 @@ export const DayView: React.FC<DayViewProps> = ({
             <div className="flex justify-center py-4">
               <BeerBottleIllustration
                 beer={beer}
-                averageScore={stats.average}
+                averageScore={userHasRated ? stats.average : null}
                 size="lg"
               />
             </div>
@@ -389,7 +398,7 @@ export const DayView: React.FC<DayViewProps> = ({
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <span>Resultat för Dag {day}</span>
               </h3>
-              {stats.average !== null && (
+              {userHasRated && stats.average !== null && (
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-xs text-slate-400 uppercase font-medium">Snitt:</span>
                   <span
@@ -403,11 +412,17 @@ export const DayView: React.FC<DayViewProps> = ({
               )}
             </div>
 
+            {!userHasRated && (
+              <p className="text-xs text-slate-400">
+                Sätt ditt betyg ovan för att se snittet och vad övriga i gruppen tyckte.
+              </p>
+            )}
+
             <div className="space-y-3">
               {TESTERS.map((tester) => {
                 const rating = ratings[tester.id];
                 const hasRated = rating !== undefined && typeof rating.score === 'number';
-                const testerScoreStyle = hasRated ? getScoreStyle(rating.score) : null;
+                const testerScoreStyle = hasRated && userHasRated ? getScoreStyle(rating.score) : null;
 
                 return (
                   <div
@@ -430,12 +445,12 @@ export const DayView: React.FC<DayViewProps> = ({
                             </span>
                           )}
                         </div>
-                        {rating?.notes && (
+                        {userHasRated && rating?.notes && (
                           <div className="text-xs text-slate-400 italic mt-0.5 line-clamp-1">
                             "{rating.notes}"
                           </div>
                         )}
-                        {rating?.flavorTags && rating.flavorTags.length > 0 && (
+                        {userHasRated && rating?.flavorTags && rating.flavorTags.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {rating.flavorTags.slice(0, 3).map((tag) => (
                               <span
@@ -457,15 +472,19 @@ export const DayView: React.FC<DayViewProps> = ({
 
                     <div className="text-right">
                       {hasRated ? (
-                        <div className="flex items-baseline gap-1">
-                          <span
-                            className="text-xl font-bold font-mono tabular-nums"
-                            style={{ color: testerScoreStyle?.color }}
-                          >
-                            {rating.score.toFixed(1)}
-                          </span>
-                          <span className="text-xs text-slate-500 font-mono">/10</span>
-                        </div>
+                        userHasRated ? (
+                          <div className="flex items-baseline gap-1">
+                            <span
+                              className="text-xl font-bold font-mono tabular-nums"
+                              style={{ color: testerScoreStyle?.color }}
+                            >
+                              {rating.score.toFixed(1)}
+                            </span>
+                            <span className="text-xs text-slate-500 font-mono">/10</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">Dold</span>
+                        )
                       ) : (
                         <span className="text-xs text-slate-500 italic">Ej provat än</span>
                       )}

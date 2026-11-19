@@ -33,11 +33,3 @@ export interface UserRating {
 export type DayRatings = Partial<Record<TesterId, UserRating>>;
 
 export type CalendarRatings = Record<number, DayRatings>;
-
-export interface GoogleSheetConfig {
-  sheetUrl: string;
-  autoSync: boolean;
-  lastSyncTime?: string;
-  syncStatus: 'idle' | 'syncing' | 'success' | 'error';
-  errorMessage?: string;
-}

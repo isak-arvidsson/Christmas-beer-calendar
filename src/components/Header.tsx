@@ -3,7 +3,6 @@ import {
   Calendar,
   Award,
   Beer,
-  RefreshCw,
   LogOut,
   X,
 } from 'lucide-react';
@@ -14,8 +13,6 @@ interface HeaderProps {
   currentView: 'calendar' | 'day' | 'leaderboard';
   onNavigate: (view: 'calendar' | 'day' | 'leaderboard') => void;
   activeTesterId: TesterId;
-  onOpenSyncModal: () => void;
-  syncStatus: 'idle' | 'syncing' | 'success' | 'error';
   onSignOut: () => void;
 }
 
@@ -23,8 +20,6 @@ export const Header: React.FC<HeaderProps> = ({
   currentView,
   onNavigate,
   activeTesterId,
-  onOpenSyncModal,
-  syncStatus,
   onSignOut,
 }) => {
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
@@ -44,21 +39,23 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-amber-950/30 bg-[#0c1412]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 md:gap-8 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex md:grid md:grid-cols-[1fr_auto_1fr] max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           {/* Zone 1: Single text element wordmark */}
-          <button
-            type="button"
-            onClick={() => onNavigate('day')}
-            className="group flex items-center gap-2.5 text-left text-base sm:text-lg md:text-xl font-bold tracking-tight text-amber-100 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0 font-cinzel"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 group-hover:bg-amber-500/30">
-              🎄
-            </span>
-            <span>Julölskalendern</span>
-          </button>
+          <div className="flex items-center justify-start">
+            <button
+              type="button"
+              onClick={() => onNavigate('day')}
+              className="group flex items-center gap-2.5 text-left text-base sm:text-lg md:text-xl font-bold tracking-tight text-amber-100 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0 font-cinzel"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 group-hover:bg-amber-500/30">
+                🎄
+              </span>
+              <span>Julölskalendern</span>
+            </button>
+          </div>
 
-          {/* Zone 2: 4 single-line text navigation links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+          {/* Zone 2: 3 centered navigation links */}
+          <nav className="hidden md:flex items-center justify-center gap-6 lg:gap-10 text-sm font-medium text-slate-300">
             <button
               type="button"
               onClick={() => onNavigate('day')}
@@ -91,41 +88,34 @@ export const Header: React.FC<HeaderProps> = ({
               <Award className="w-4 h-4" />
               <span>Topplista</span>
             </button>
-
-            <button
-              type="button"
-              onClick={onOpenSyncModal}
-              className="flex items-center gap-1.5 text-slate-400 hover:text-amber-300 transition-colors whitespace-nowrap shrink-0"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin text-amber-400' : ''}`} />
-              <span>Google Sheet</span>
-            </button>
           </nav>
 
           {/* Zone 3: Locked Profile Button (opens logout confirmation dialog) */}
-          <button
-            type="button"
-            onClick={() => setIsLogoutDialogOpen(true)}
-            title={`Inloggad som ${activeTester.name}. Klicka för att logga ut.`}
-            className="flex items-center gap-2 rounded-xl bg-slate-900/90 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-200 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-800 transition-all shadow-sm whitespace-nowrap shrink-0"
-          >
-            <span
-              className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-slate-950"
-              style={{ backgroundColor: activeTester.avatarColor }}
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setIsLogoutDialogOpen(true)}
+              title={`Inloggad som ${activeTester.name}. Klicka för att logga ut.`}
+              className="flex items-center gap-2 rounded-xl bg-slate-900/90 px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-200 border border-slate-700/80 hover:border-amber-500/50 hover:bg-slate-800 transition-all shadow-sm whitespace-nowrap shrink-0"
             >
-              {activeTester.shortName}
-            </span>
-            <span className="hidden lg:inline text-slate-400">Provar:</span>
-            <span className="font-semibold text-white">{activeTester.name}</span>
-          </button>
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-slate-950"
+                style={{ backgroundColor: activeTester.avatarColor }}
+              >
+                {activeTester.shortName}
+              </span>
+              <span className="hidden lg:inline text-slate-400">Provar:</span>
+              <span className="font-semibold text-white">{activeTester.name}</span>
+            </button>
+          </div>
         </div>
 
         {/* Mobile Sub-Navigation Bar */}
-        <div className="flex md:hidden items-center justify-around border-t border-slate-900 bg-[#0c1412]/95 px-2 py-2 text-xs">
+        <nav className="grid grid-cols-3 md:hidden border-t border-slate-900 bg-[#0c1412]/95 px-2 py-2 text-xs">
           <button
             type="button"
             onClick={() => onNavigate('day')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
+            className={`flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-lg text-center ${
               currentView === 'day' ? 'text-amber-400 font-semibold' : 'text-slate-400'
             }`}
           >
@@ -135,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => onNavigate('calendar')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
+            className={`flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-lg text-center ${
               currentView === 'calendar' ? 'text-amber-400 font-semibold' : 'text-slate-400'
             }`}
           >
@@ -145,22 +135,14 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => onNavigate('leaderboard')}
-            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-lg ${
+            className={`flex flex-col items-center justify-center gap-1 py-1 px-2 rounded-lg text-center ${
               currentView === 'leaderboard' ? 'text-amber-400 font-semibold' : 'text-slate-400'
             }`}
           >
             <Award className="w-4 h-4" />
             <span>Topplista</span>
           </button>
-          <button
-            type="button"
-            onClick={onOpenSyncModal}
-            className="flex flex-col items-center gap-1 py-1 px-3 rounded-lg text-slate-400"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncStatus === 'syncing' ? 'animate-spin text-amber-400' : ''}`} />
-            <span>Sync</span>
-          </button>
-        </div>
+        </nav>
       </header>
 
       {/* Logout Confirmation Dialog */}

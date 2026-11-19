@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
-import { AlertCircle, Upload, Loader2 } from 'lucide-react';
-import { BeerDay, CalendarRatings, GoogleSheetConfig, TesterId, UserRating } from './types.ts';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { CalendarRatings, TesterId, UserRating } from './types.ts';
 import { INITIAL_BEERS } from './data/initialBeers.ts';
 import { Header } from './components/Header.tsx';
 import { CalendarOverview } from './components/CalendarOverview.tsx';
 import { DayView } from './components/DayView.tsx';
 import { LeaderboardView } from './components/LeaderboardView.tsx';
-import { GoogleSheetSyncModal } from './components/GoogleSheetSyncModal.tsx';
 import { LoginScreen } from './components/LoginScreen.tsx';
-import { parseBeersFromCsv } from './utils/googleSheets.ts';
 import {
   inferTesterIdFromEmail,
   isValidTesterId,
@@ -23,22 +21,8 @@ import {
 } from './firebase.ts';
 import firebaseConfig from '../firebase-applet-config.json';
 
-const RATINGS_STORAGE_KEY = 'julol_calendar_ratings_2026';
-const BEERS_STORAGE_KEY = 'julol_calendar_beers_2026';
-const CONFIG_STORAGE_KEY = 'julol_sheet_config_2026';
+const LEGACY_RATINGS_STORAGE_KEY = 'julol_calendar_ratings_2026';
 const ACTIVE_TESTER_STORAGE_KEY = 'julol_active_tester_2026';
-
-function readLocalRatings(): CalendarRatings {
-  try {
-    const saved = localStorage.getItem(RATINGS_STORAGE_KEY);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (e) {
-    console.warn('Could not parse saved ratings', e);
-  }
-  return {};
-}
 
 function formatDatabaseError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
@@ -62,7 +46,6 @@ function getTodayHatchDay(): number {
 export default function App() {
   const [selectedDay, setSelectedDay] = useState<number>(getTodayHatchDay);
   const [currentView, setCurrentView] = useState<'calendar' | 'day' | 'leaderboard'>('day');
-  const [isSyncModalOpen, setIsSyncModalOpen] = useState<boolean>(false);
 
   // Firebase Auth & Shared Database state
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -71,8 +54,6 @@ export default function App() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [dbError, setDbError] = useState<string | null>(null);
-  const [hasLoadedRemoteRatings, setHasLoadedRemoteRatings] = useState<boolean>(false);
-  const [isMigratingLocal, setIsMigratingLocal] = useState<boolean>(false);
 
   // Active tester (locked to the signed-in account)
   const [activeTesterId, setActiveTesterId] = useState<TesterId>(() => {
@@ -83,48 +64,12 @@ export default function App() {
     return 'isak';
   });
 
-  // Beer catalog
-  const [beers, setBeers] = useState<BeerDay[]>(() => {
-    try {
-      const saved = localStorage.getItem(BEERS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((p: BeerDay) => {
-            const init = INITIAL_BEERS.find((b) => b.day === p.day);
-            return {
-              ...init,
-              ...p,
-              imageUrl: p.imageUrl || init?.imageUrl,
-            };
-          });
-        }
-      }
-    } catch (e) {
-      console.warn('Could not parse saved beers', e);
-    }
-    return INITIAL_BEERS;
-  });
+  // Static beer catalog
+  const beers = INITIAL_BEERS;
 
-  // Ratings map (shared Firestore truth when signed in)
+  // Ratings map (Firestore is the sole source of truth)
   const [ratings, setRatings] = useState<CalendarRatings>({});
-
-  // Google Sheet Configuration
-  const [sheetConfig, setSheetConfig] = useState<GoogleSheetConfig>(() => {
-    try {
-      const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.warn('Could not parse saved sheet config', e);
-    }
-    return {
-      sheetUrl: '',
-      autoSync: true,
-      syncStatus: 'idle',
-    };
-  });
+  const remoteRatingsRef = useRef<CalendarRatings>({});
 
   // Debounce timers and pending optimistic payloads for smooth slider writes
   const pendingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -133,6 +78,15 @@ export default function App() {
   >({});
   const activeWritesCountRef = useRef<number>(0);
   const savedResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Remove any legacy locally cached ratings from previous versions
+  useEffect(() => {
+    try {
+      localStorage.removeItem(LEGACY_RATINGS_STORAGE_KEY);
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
 
   // Subscribe to Firebase Auth and lock activeTesterId to the signed-in user
   useEffect(() => {
@@ -146,8 +100,8 @@ export default function App() {
           localStorage.setItem(ACTIVE_TESTER_STORAGE_KEY, inferred);
         }
       } else {
-        setHasLoadedRemoteRatings(false);
         setSavingState('idle');
+        remoteRatingsRef.current = {};
         setRatings({});
       }
     });
@@ -189,8 +143,9 @@ export default function App() {
     const unsubscribeRatings = subscribeToRatings(
       (remoteRatings) => {
         if (isCancelled) return;
+        remoteRatingsRef.current = remoteRatings;
         const merged: CalendarRatings = { ...remoteRatings };
-        // Preserve any local optimistic edits currently awaiting debounce/write
+        // Preserve in-flight slider edits currently awaiting debounced Firestore write
         for (const pending of Object.values(pendingPayloadsRef.current)) {
           merged[pending.day] = {
             ...(merged[pending.day] || {}),
@@ -198,7 +153,6 @@ export default function App() {
           };
         }
         setRatings(merged);
-        setHasLoadedRemoteRatings(true);
         setDbError(null);
       },
       (err) => {
@@ -212,39 +166,6 @@ export default function App() {
       unsubscribeRatings();
     };
   }, [authReady, authUser]);
-
-  // Detect any pre-existing localStorage ratings not yet stored in Firestore
-  const unmigratedLocalEntries = useMemo(() => {
-    if (!authUser || !hasLoadedRemoteRatings) return [];
-    const local = readLocalRatings();
-    const missing: { day: number; testerId: TesterId; userRating: UserRating }[] = [];
-    for (const [dayStr, dayRatings] of Object.entries(local)) {
-      const day = parseInt(dayStr, 10);
-      if (!day || day < 1 || day > 24 || !dayRatings) continue;
-      for (const [testerKey, rating] of Object.entries(dayRatings)) {
-        if (!isValidTesterId(testerKey) || !rating || typeof rating.score !== 'number') continue;
-        if (ratings[day]?.[testerKey] === undefined) {
-          missing.push({ day, testerId: testerKey, userRating: rating });
-        }
-      }
-    }
-    return missing;
-  }, [authUser, hasLoadedRemoteRatings, ratings]);
-
-  const handleMigrateLocalRatings = async () => {
-    if (!authUser || unmigratedLocalEntries.length === 0) return;
-    setIsMigratingLocal(true);
-    setDbError(null);
-    try {
-      for (const entry of unmigratedLocalEntries) {
-        await saveRatingToFirestore(entry.day, entry.testerId, entry.userRating, authUser.uid);
-      }
-    } catch (err) {
-      setDbError(formatDatabaseError(err));
-    } finally {
-      setIsMigratingLocal(false);
-    }
-  };
 
   // Handle Username/Email + Password Sign-In
   const handleLoginSubmit = async (usernameOrEmail: string, password: string) => {
@@ -309,19 +230,14 @@ export default function App() {
     const writeKey = `${day}_${testerId}`;
     pendingPayloadsRef.current[writeKey] = { day, testerId, userRating };
 
-    // Immediate optimistic state update for responsive slider dragging
-    setRatings((prev) => {
-      const nextDayRatings = {
+    // Immediate in-memory optimistic state update for responsive slider dragging
+    setRatings((prev) => ({
+      ...prev,
+      [day]: {
         ...(prev[day] || {}),
         [testerId]: userRating,
-      };
-      const nextRatings = {
-        ...prev,
-        [day]: nextDayRatings,
-      };
-      localStorage.setItem(RATINGS_STORAGE_KEY, JSON.stringify(nextRatings));
-      return nextRatings;
-    });
+      },
+    }));
 
     setSavingState('saving');
     if (savedResetTimerRef.current) {
@@ -361,98 +277,20 @@ export default function App() {
       } catch (err) {
         activeWritesCountRef.current = Math.max(0, activeWritesCountRef.current - 1);
         delete pendingPayloadsRef.current[writeKey];
+        // Revert UI back to confirmed database state on write failure
+        const reverted: CalendarRatings = { ...remoteRatingsRef.current };
+        for (const pending of Object.values(pendingPayloadsRef.current)) {
+          reverted[pending.day] = {
+            ...(reverted[pending.day] || {}),
+            [pending.testerId]: pending.userRating,
+          };
+        }
+        setRatings(reverted);
         setSavingState('error');
         setDbError(formatDatabaseError(err));
       }
     }, 300);
   };
-
-  // Save sheet config to localStorage
-  const handleSaveConfig = (newConfig: GoogleSheetConfig) => {
-    setSheetConfig(newConfig);
-    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(newConfig));
-  };
-
-  // Google Sheet Sync fetcher
-  const syncWithGoogleSheet = useCallback(
-    async (overrideUrl?: string): Promise<boolean> => {
-      const urlToFetch = overrideUrl || sheetConfig.sheetUrl;
-      if (!urlToFetch) return false;
-
-      try {
-        setSheetConfig((prev) => ({ ...prev, syncStatus: 'syncing' }));
-
-        const response = await fetch(urlToFetch, { cache: 'no-cache' });
-        if (!response.ok) {
-          throw new Error(`Kunde inte hämta kalkylark: HTTP ${response.status}`);
-        }
-
-        const csvText = await response.text();
-        const { beers: updatedBeers, ratingsPatch } = parseBeersFromCsv(csvText);
-
-        if (updatedBeers.length > 0) {
-          setBeers(updatedBeers);
-          localStorage.setItem(BEERS_STORAGE_KEY, JSON.stringify(updatedBeers));
-        }
-
-        if (ratingsPatch && Object.keys(ratingsPatch).length > 0) {
-          setRatings((prev) => {
-            const merged: CalendarRatings = { ...prev };
-            for (const [dayStr, tRatings] of Object.entries(ratingsPatch)) {
-              const d = parseInt(dayStr, 10);
-              merged[d] = {
-                ...(merged[d] || {}),
-                ...tRatings,
-              };
-            }
-            localStorage.setItem(RATINGS_STORAGE_KEY, JSON.stringify(merged));
-            return merged;
-          });
-
-          if (authUser) {
-            for (const [dayStr, tRatings] of Object.entries(ratingsPatch)) {
-              const d = parseInt(dayStr, 10);
-              for (const [testerKey, rating] of Object.entries(tRatings)) {
-                if (isValidTesterId(testerKey) && rating) {
-                  await saveRatingToFirestore(d, testerKey, rating, authUser.uid);
-                }
-              }
-            }
-          }
-        }
-
-        const updatedConfig: GoogleSheetConfig = {
-          ...sheetConfig,
-          sheetUrl: urlToFetch,
-          syncStatus: 'success',
-          lastSyncTime: new Date().toLocaleTimeString('sv-SE', {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-        };
-        handleSaveConfig(updatedConfig);
-        return true;
-      } catch (err: any) {
-        console.error('Google Sheet sync failed:', err);
-        const errorConfig: GoogleSheetConfig = {
-          ...sheetConfig,
-          sheetUrl: urlToFetch,
-          syncStatus: 'error',
-          errorMessage: err.message || 'Okänt fel vid synkning',
-        };
-        handleSaveConfig(errorConfig);
-        return false;
-      }
-    },
-    [sheetConfig, authUser]
-  );
-
-  // Auto-sync on mount if enabled and authenticated
-  useEffect(() => {
-    if (authUser && sheetConfig.autoSync && sheetConfig.sheetUrl) {
-      syncWithGoogleSheet();
-    }
-  }, [authUser]);
 
   // Initial auth loading screen
   if (!authReady) {
@@ -485,7 +323,7 @@ export default function App() {
     setCurrentView(view);
   };
 
-  const currentBeer = beers.find((b) => b.day === selectedDay) || beers[0] || INITIAL_BEERS[0];
+  const currentBeer = beers.find((b) => b.day === selectedDay) || beers[0];
   const currentDayRatings = ratings[selectedDay] || {};
 
   return (
@@ -495,12 +333,10 @@ export default function App() {
         currentView={currentView}
         onNavigate={handleNavigate}
         activeTesterId={activeTesterId}
-        onOpenSyncModal={() => setIsSyncModalOpen(true)}
-        syncStatus={sheetConfig.syncStatus}
         onSignOut={handleSignOut}
       />
 
-      {/* Shared Database Error / Migration Notices */}
+      {/* Shared Database Error Notice */}
       {dbError && (
         <div className="border-b border-red-500/30 bg-red-950/50 px-4 py-2.5">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 text-xs text-red-200">
@@ -519,33 +355,13 @@ export default function App() {
         </div>
       )}
 
-      {unmigratedLocalEntries.length > 0 && (
-        <div className="border-b border-emerald-500/20 bg-emerald-950/30 px-4 py-2.5">
-          <div className="mx-auto flex max-w-7xl flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-            <div className="flex items-center gap-2 text-emerald-200">
-              <Upload className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                Det finns {unmigratedLocalEntries.length} lokalt sparade betyg som ännu inte ligger i den gemensamma databasen.
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleMigrateLocalRatings}
-              disabled={isMigratingLocal}
-              className="inline-flex items-center justify-center gap-1.5 self-start sm:self-auto rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-colors disabled:opacity-60 shrink-0"
-            >
-              <span>{isMigratingLocal ? 'Laddar upp...' : 'Synka till databasen'}</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Main App Content Viewport */}
       <main className="flex-1 pb-16">
         {currentView === 'calendar' && (
           <CalendarOverview
             beers={beers}
             ratings={ratings}
+            activeTesterId={activeTesterId}
             onSelectDay={(day) => {
               setSelectedDay(day);
               setCurrentView('day');
@@ -573,6 +389,7 @@ export default function App() {
           <LeaderboardView
             beers={beers}
             ratings={ratings}
+            activeTesterId={activeTesterId}
             onSelectDay={(day) => {
               setSelectedDay(day);
               setCurrentView('day');
@@ -580,17 +397,6 @@ export default function App() {
           />
         )}
       </main>
-
-      {/* Google Sheets Sync Drawer / Modal */}
-      <GoogleSheetSyncModal
-        isOpen={isSyncModalOpen}
-        onClose={() => setIsSyncModalOpen(false)}
-        config={sheetConfig}
-        onSaveConfig={handleSaveConfig}
-        onTriggerSync={syncWithGoogleSheet}
-        beers={beers}
-        ratings={ratings}
-      />
     </div>
   );
 }

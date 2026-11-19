@@ -8,12 +8,14 @@ import { computeDayRatingStats, getScoreStyle } from '../utils/colors.ts';
 interface CalendarOverviewProps {
   beers: BeerDay[];
   ratings: CalendarRatings;
+  activeTesterId: TesterId;
   onSelectDay: (day: number) => void;
 }
 
 export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
   beers,
   ratings,
+  activeTesterId,
   onSelectDay,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,7 +52,8 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
           {filteredBeers.map((beer) => {
             const dayRating = ratings[beer.day] || {};
             const stats = computeDayRatingStats(dayRating);
-            const scoreStyle = stats.average !== null ? getScoreStyle(stats.average) : null;
+            const userHasRated = typeof dayRating[activeTesterId]?.score === 'number';
+            const scoreStyle = userHasRated && stats.average !== null ? getScoreStyle(stats.average) : null;
 
             return (
               <div
@@ -73,8 +76,8 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
                       </span>
                     </div>
 
-                    {/* Average Score Badge */}
-                    {stats.average !== null ? (
+                    {/* Average Score Badge (only shown once current user has rated) */}
+                    {userHasRated && stats.average !== null ? (
                       <div
                         className="flex items-baseline gap-1 px-2.5 py-1 rounded-lg text-xs font-extrabold font-mono tabular-nums shadow-sm"
                         style={{
@@ -86,6 +89,8 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
                         <span>{stats.formattedAverage}</span>
                         <span className="text-[10px] opacity-75 font-normal">/10</span>
                       </div>
+                    ) : stats.count > 0 ? (
+                      <span className="text-[11px] text-slate-500 italic">Dolt snitt</span>
                     ) : (
                       <span className="text-[11px] text-slate-500 italic">Ej provad</span>
                     )}
@@ -95,7 +100,7 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
                   <div className="py-2 flex justify-center">
                     <BeerBottleIllustration
                       beer={beer}
-                      averageScore={stats.average}
+                      averageScore={userHasRated ? stats.average : null}
                       size="sm"
                     />
                   </div>
@@ -128,7 +133,11 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({
                           <span
                             key={tester.id}
                             title={`${tester.name}: ${
-                              hasRated ? `${dayRating[tester.id]?.score?.toFixed(1)}/10` : 'Ej betygsatt'
+                              hasRated
+                                ? userHasRated
+                                  ? `${dayRating[tester.id]?.score?.toFixed(1)}/10`
+                                  : 'Har provat (betyg dolt)'
+                                : 'Ej betygsatt'
                             }`}
                             className={`flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold transition-transform ${
                               hasRated

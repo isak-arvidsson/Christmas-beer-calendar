@@ -18,12 +18,14 @@ import { BeerBottleIllustration } from './BeerBottleIllustration.tsx';
 interface LeaderboardViewProps {
   beers: BeerDay[];
   ratings: CalendarRatings;
+  activeTesterId: TesterId;
   onSelectDay: (day: number) => void;
 }
 
 export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   beers,
   ratings,
+  activeTesterId,
   onSelectDay,
 }) => {
   const [sortOption, setSortOption] = useState<
@@ -35,19 +37,28 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     return beers.map((beer) => {
       const dayRating = ratings[beer.day] || {};
       const stats = computeDayRatingStats(dayRating);
+      const userHasRated = typeof dayRating[activeTesterId]?.score === 'number';
       return {
         beer,
         dayRating,
         stats,
+        userHasRated,
       };
     });
-  }, [beers, ratings]);
+  }, [beers, ratings, activeTesterId]);
 
-  // Sort according to active selection
+  // Sort according to active selection (beers not rated by current user stay below & sorted by day so hidden scores never leak)
   const sortedBeers = useMemo(() => {
     const list = [...beerStatsList];
 
     list.sort((a, b) => {
+      if (a.userHasRated !== b.userHasRated) {
+        return a.userHasRated ? -1 : 1;
+      }
+      if (!a.userHasRated && !b.userHasRated) {
+        return a.beer.day - b.beer.day;
+      }
+
       if (sortOption === 'average') {
         const avgA = a.stats.average ?? -1;
         const avgB = b.stats.average ?? -1;
@@ -72,8 +83,8 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     return list;
   }, [beerStatsList, sortOption]);
 
-  // Top 3 Podium (from beers with at least 1 rating)
-  const ratedBeers = sortedBeers.filter((item) => item.stats.average !== null);
+  // Top 3 Podium (only from beers the current user has rated)
+  const ratedBeers = sortedBeers.filter((item) => item.userHasRated && item.stats.average !== null);
   const top1 = ratedBeers[0];
   const top2 = ratedBeers[1];
   const top3 = ratedBeers[2];
@@ -189,7 +200,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         </div>
       ) : (
         <div className="max-w-md mx-auto mb-10 p-6 rounded-2xl bg-[#14201c] border border-slate-800 text-center text-slate-400 text-sm">
-          Inga öl har betygsatts än! Klicka på Kalender och öppna Dag 1 för att börja provsmaka.
+          Du har inte betygsatt några öl än! Öppna Dagens lucka eller Kalendern för att sätta ditt första betyg och avslöja topplistan.
         </div>
       )}
 
@@ -271,9 +282,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-sans">
               {sortedBeers.map((item, index) => {
-                const { beer, dayRating, stats } = item;
-                const scoreStyle = stats.average !== null ? getScoreStyle(stats.average) : null;
-                const isTop3 = index < 3 && stats.average !== null;
+                const { beer, dayRating, stats, userHasRated } = item;
+                const scoreStyle = userHasRated && stats.average !== null ? getScoreStyle(stats.average) : null;
+                const isTop3 = index < 3 && userHasRated && stats.average !== null;
 
                 return (
                   <tr
@@ -284,7 +295,9 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                     {/* Rank Number */}
                     <td className="py-4 pl-4 pr-2 font-mono tabular-nums">
                       <div className="flex items-center gap-1.5">
-                        {isTop3 ? (
+                        {!userHasRated ? (
+                          <span className="text-slate-600 font-medium pl-1.5">–</span>
+                        ) : isTop3 ? (
                           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/40">
                             {index + 1}
                           </span>
@@ -311,7 +324,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
                     {/* Average Score */}
                     <td className="py-4 px-3 text-center">
-                      {stats.average !== null ? (
+                      {userHasRated && stats.average !== null ? (
                         <div
                           className="inline-block px-2.5 py-1 rounded-lg text-sm font-extrabold font-mono tabular-nums shadow-sm"
                           style={{
@@ -322,25 +335,41 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
                         >
                           {stats.formattedAverage}
                         </div>
+                      ) : stats.count > 0 ? (
+                        <span
+                          className="text-xs text-slate-500 italic"
+                          title="Sätt ditt eget betyg på ölen för att se snittet"
+                        >
+                          Dold
+                        </span>
                       ) : (
                         <span className="text-xs text-slate-600">–</span>
                       )}
                     </td>
 
-                    {/* Individual scores for all 6 testers */}
+                    {/* Individual scores for all testers */}
                     {TESTERS.map((tester) => {
                       const score = dayRating[tester.id]?.score;
                       const hasScore = typeof score === 'number';
-                      const testerStyle = hasScore ? getScoreStyle(score) : null;
+                      const testerStyle = hasScore && userHasRated ? getScoreStyle(score) : null;
                       return (
                         <td key={tester.id} className="py-4 px-2 text-center font-mono tabular-nums">
                           {hasScore ? (
-                            <span
-                              className="text-xs font-bold"
-                              style={{ color: testerStyle?.color }}
-                            >
-                              {score.toFixed(1)}
-                            </span>
+                            userHasRated ? (
+                              <span
+                                className="text-xs font-bold"
+                                style={{ color: testerStyle?.color }}
+                              >
+                                {score.toFixed(1)}
+                              </span>
+                            ) : (
+                              <span
+                                className="text-slate-500 text-xs"
+                                title="Sätt ditt eget betyg på ölen för att se andras betyg"
+                              >
+                                •
+                              </span>
+                            )
                           ) : (
                             <span className="text-slate-600 text-xs">–</span>
                           )}
